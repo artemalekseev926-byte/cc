@@ -1,0 +1,19 @@
+# Steam ships the unpacked "dir" build through SteamPipe (no installer needed).
+appId: com.deskforge.app
+productName: DeskForge
+directories:
+  output: release
+files:
+  - dist/**/*
+  - package.json
+  - "!**/*.map"
+asarUnpack:
+  # Native modules (and steamworks.js' bundled steam_api64.dll) must live outside the asar archive.
+  - node_modules/koffi/**
+  - node_modules/steamworks.js/**
+win:
+  target: dir
+  # Add build/icon.ico (256x256) and set `icon: build/icon.ico` before the first Steam release.
+linux:
+  target: dir
+  category: Utility

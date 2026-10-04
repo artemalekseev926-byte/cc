@@ -1,0 +1,13 @@
+"DepotBuild"
+{
+	"DepotID" "YOUR_DEPOT_ID"
+	"FileMapping"
+	{
+		"LocalPath" "*"
+		"DepotPath" "."
+		"Recursive" "1"
+	}
+	// Never ship the development app id file.
+	"FileExclusion" "steam_appid.txt"
+	"FileExclusion" "*.pdb"
+}
