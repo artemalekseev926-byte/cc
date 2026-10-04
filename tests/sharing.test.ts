@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createEmptyTheme, createImageLayer } from '../src/shared/theme/factory';
 import { parseTheme } from '../src/shared/theme/schema';
-import { assetKeyFor, buildThemeFromArtwork, classifyFile, humanizeFileName } from '../src/shared/workshop/import';
-import { canPublish, validateForPublish, workshopDescription } from '../src/shared/workshop/validate';
+import { assetKeyFor, buildThemeFromArtwork, classifyFile, humanizeFileName } from '../src/shared/sharing/import';
+import { isSafePackageEntry, packageFileName } from '../src/shared/sharing/package';
+import { canExport, validateForExport } from '../src/shared/sharing/validate';
 
 describe('artist import', () => {
   it('classifies files', () => {
@@ -33,35 +34,52 @@ describe('artist import', () => {
   });
 });
 
-describe('publish checklist', () => {
+describe('export checklist', () => {
   const base = () => {
-    const theme = createEmptyTheme('pub', 'Publish me');
-    return { theme, title: 'Publish me', description: 'Nice', tags: ['Nature'], previewBytes: 200_000, contentBytes: 10_000_000, acceptedTerms: true };
+    const theme = createEmptyTheme('pub', 'Share me');
+    return { theme, title: 'Share me', description: 'Nice', tags: ['Nature'], previewBytes: 200_000, contentBytes: 10_000_000 };
   };
 
-  it('passes a complete submission', () => {
-    expect(canPublish(validateForPublish(base()))).toBe(true);
+  it('passes a complete theme', () => {
+    expect(canExport(validateForExport(base()))).toBe(true);
   });
 
-  it('blocks missing preview, short title, missing terms and missing assets', () => {
-    expect(canPublish(validateForPublish({ ...base(), previewBytes: null }))).toBe(false);
-    expect(canPublish(validateForPublish({ ...base(), title: 'ab' }))).toBe(false);
-    expect(canPublish(validateForPublish({ ...base(), acceptedTerms: false }))).toBe(false);
+  it('blocks a short title and missing assets, but only warns about a missing cover', () => {
+    expect(canExport(validateForExport({ ...base(), title: 'ab' }))).toBe(false);
+    const noCover = validateForExport({ ...base(), previewBytes: null });
+    expect(noCover.find((c) => c.id === 'preview')?.level).toBe('warning');
+    expect(canExport(noCover)).toBe(true);
     const input = base();
     input.theme.wallpaper.layers.push(createImageLayer('missing'));
-    expect(validateForPublish(input).find((c) => c.id === 'assets')?.level).toBe('error');
+    expect(validateForExport(input).find((c) => c.id === 'assets')?.level).toBe('error');
   });
 
   it('warns but allows a missing description and unused assets', () => {
     const input = { ...base(), description: '' };
     input.theme.assets.extra = { file: 'assets/extra.png', kind: 'image', bytes: 1 };
-    const checks = validateForPublish(input);
+    const checks = validateForExport(input);
     expect(checks.find((c) => c.id === 'description')?.level).toBe('warning');
     expect(checks.find((c) => c.id === 'unused')?.level).toBe('warning');
-    expect(canPublish(checks)).toBe(true);
+    expect(canExport(checks)).toBe(true);
+  });
+});
+
+describe('.deskforge package format', () => {
+  it('accepts only known entries and rejects path traversal', () => {
+    expect(isSafePackageEntry('theme.json')).toBe(true);
+    expect(isSafePackageEntry('preview.jpg')).toBe(true);
+    expect(isSafePackageEntry('assets/forest-2.mp4')).toBe(true);
+    for (const bad of ['../evil.exe', 'assets/../../x', '/etc/passwd', 'assets\\x.png', 'C:/x', 'run.bat', 'assets/sub/x.png', 'assets/.hidden']) {
+      expect(isSafePackageEntry(bad), bad).toBe(false);
+    }
   });
 
-  it('adds a performance badge to the Workshop description', () => {
-    expect(workshopDescription('Hello', base().theme)).toMatch(/^Hello\n\n\[b\].*Performance: Light/);
+  it('builds a safe file name', () => {
+    expect(packageFileName('Neon: Drive?')).toBe('Neon Drive.deskforge');
+    expect(packageFileName('  ')).toBe('theme.deskforge');
+  });
+
+  it('treats .deskforge files as themes when importing', () => {
+    expect(classifyFile({ path: '/a/x.deskforge', name: 'x.deskforge', bytes: 10 }).kind).toBe('theme');
   });
 });

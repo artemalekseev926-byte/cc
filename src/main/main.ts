@@ -1,12 +1,12 @@
-import { readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, BrowserWindow, Menu, nativeImage, shell, Tray } from 'electron';
-import type { Settings } from '../shared/ipc';
+import { IPC, type Settings } from '../shared/ipc';
+import { PACKAGE_EXT } from '../shared/sharing/package';
 import { describeActive, registerIpc } from './ipc';
 import { createPlatform } from './platform';
 import { handleThemeProtocol, registerSchemePrivileges } from './protocol';
 import { SettingsStore } from './settings';
-import { SteamService } from './steam';
 import { ThemeStore } from './storage';
 import { WallpaperHost } from './wallpaperHost';
 import { loadPage, PRELOAD } from './windows';
@@ -22,15 +22,8 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 }
 
-function readSteamAppId(): number {
-  const fromEnv = Number(process.env.DESKFORGE_STEAM_APP_ID);
-  if (fromEnv > 0) return fromEnv;
-  try {
-    const pkg = JSON.parse(readFileSync(join(app.getAppPath(), 'package.json'), 'utf8'));
-    return Number(pkg.deskforge?.steamAppId) || 480;
-  } catch {
-    return 480;
-  }
+function packageFromArgv(argv: string[]): string | null {
+  return argv.find((arg) => arg.toLowerCase().endsWith(`.${PACKAGE_EXT}`) && existsSync(arg)) ?? null;
 }
 
 let studio: BrowserWindow | null = null;
@@ -42,7 +35,6 @@ const userData = app.getPath('userData');
 const settings = new SettingsStore(userData);
 const store = new ThemeStore(join(userData, 'themes'));
 const platform = createPlatform(userData);
-const steam = new SteamService(readSteamAppId());
 let host: WallpaperHost;
 
 function createStudio(show: boolean): BrowserWindow {
@@ -71,7 +63,7 @@ function createStudio(show: boolean): BrowserWindow {
     studio = null;
   });
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:|^steam:/.test(url)) void shell.openExternal(url);
+    if (/^https?:/.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (e, url) => {
@@ -125,27 +117,43 @@ function refreshTray() {
 
 function applySettingsSideEffects(s: Settings) {
   if (process.platform === 'win32' || process.platform === 'darwin') {
-    app.setLoginItemSettings({ openAtLogin: s.launchAtStartup, args: ['--hidden'] });
+    const portable = process.env.PORTABLE_EXECUTABLE_FILE;
+    app.setLoginItemSettings({ openAtLogin: s.launchAtStartup, args: ['--hidden'], ...(portable ? { path: portable } : {}) });
   }
 }
 
-app.on('second-instance', showStudio);
+async function importFromFile(path: string) {
+  try {
+    const theme = await store.importPackage(path);
+    showStudio();
+    const target = studio!;
+    const send = () => {
+      target.webContents.send(IPC.libraryChanged);
+      target.webContents.send(IPC.themesImported, { id: theme.id, name: theme.name });
+    };
+    if (target.webContents.isLoading()) target.webContents.once('did-finish-load', send);
+    else send();
+    return theme;
+  } catch (err) {
+    console.warn('Could not import', path, err);
+    throw err;
+  }
+}
+
+app.on('second-instance', (_event, argv) => {
+  const pkg = packageFromArgv(argv);
+  if (pkg && host) void importFromFile(pkg).catch(() => showStudio());
+  else showStudio();
+});
 
 app.whenReady().then(async () => {
-  if (app.isPackaged && steam.restartThroughSteamIfNeeded()) {
-    quitting = true;
-    app.quit();
-    return;
-  }
   await store.init();
   const s = await settings.load();
   handleThemeProtocol(store);
-  steam.init();
-  store.setWorkshopItems(steam.installedItems());
   host = new WallpaperHost(platform);
   host.onStatus(refreshTray);
 
-  registerIpc({ store, settings, platform, host, steam, studioWindow: () => studio, applySettingsSideEffects });
+  registerIpc({ store, settings, platform, host, importPackage: importFromFile, studioWindow: () => studio, applySettingsSideEffects });
 
   tray = new Tray(trayIcon());
   tray.on('click', showStudio);
@@ -162,6 +170,10 @@ app.whenReady().then(async () => {
 
   const startHidden = process.argv.includes('--hidden') && host.status().running;
   studio = createStudio(!startHidden);
+  applySettingsSideEffects(s);
+
+  const pkg = packageFromArgv(process.argv);
+  if (pkg) void importFromFile(pkg).catch(() => undefined);
 });
 
 app.on('window-all-closed', () => {

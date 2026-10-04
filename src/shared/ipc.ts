@@ -1,6 +1,6 @@
 import type { MeasuredReport } from './perf/measure';
 import type { Asset, Theme } from './theme/schema';
-import type { ClassifiedFile } from './workshop/import';
+import type { ClassifiedFile } from './sharing/import';
 
 export const IPC = {
   platformCapabilities: 'platform:capabilities',
@@ -16,6 +16,10 @@ export const IPC = {
   themesFolderSize: 'themes:folderSize',
   themesOpenFolder: 'themes:openFolder',
   themesPickFiles: 'themes:pickFiles',
+  themesExportPackage: 'themes:exportPackage',
+  themesImportPackage: 'themes:importPackage',
+  themesRevealFile: 'themes:revealFile',
+  themesImported: 'themes:imported',
   desktopApply: 'desktop:apply',
   desktopPreviewLive: 'desktop:previewLive',
   desktopStop: 'desktop:stop',
@@ -23,11 +27,6 @@ export const IPC = {
   desktopStatus: 'desktop:status',
   perfProbe: 'perf:probe',
   perfProgress: 'perf:progress',
-  steamStatus: 'steam:status',
-  steamPublish: 'steam:publish',
-  steamPublishProgress: 'steam:publishProgress',
-  steamSubscribed: 'steam:subscribed',
-  steamOpenItem: 'steam:openItem',
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',
   wallpaperTheme: 'wallpaper:theme',
@@ -69,7 +68,7 @@ export interface DisplayDescriptor {
   primary: boolean;
 }
 
-export type ThemeSource = 'builtin' | 'local' | 'workshop';
+export type ThemeSource = 'builtin' | 'local';
 
 export interface ThemeSummary {
   id: string;
@@ -77,7 +76,6 @@ export interface ThemeSummary {
   author: string;
   tags: string[];
   source: ThemeSource;
-  workshopId?: string;
   previewUrl?: string;
   updatedAt?: string;
   theme: Theme;
@@ -118,40 +116,15 @@ export interface PerfProgress {
   progress: number;
 }
 
-export interface SteamStatus {
-  available: boolean;
-  appId: number;
-  userName?: string;
-  reason?: string;
-}
-
-export interface PublishRequest {
-  themeId: string;
-  title: string;
-  description: string;
-  changeNote: string;
-  tags: string[];
-  visibility: 'public' | 'friends' | 'private' | 'unlisted';
-}
-
-export interface PublishProgress {
-  stage: 'creating' | 'preparing' | 'uploading' | 'preview' | 'committing' | 'done' | 'error';
-  progress: number;
-  message?: string;
-}
-
-export interface PublishResult {
+export interface ExportResult {
   ok: boolean;
-  workshopId?: string;
-  needsToAcceptAgreement?: boolean;
-  error?: string;
+  path?: string;
+  bytes?: number;
 }
 
-export interface SubscribedItem {
-  workshopId: string;
-  title: string;
-  installed: boolean;
-  themeId?: string;
+export interface ImportedThemeInfo {
+  id: string;
+  name: string;
 }
 
 export type Language = 'auto' | 'ru' | 'en';
@@ -199,8 +172,12 @@ export interface DeskforgeApi {
     folderSize(themeId: string): Promise<number>;
     openFolder(themeId: string): Promise<void>;
     pickFiles(kind: 'image' | 'video' | 'any'): Promise<string[]>;
+    exportPackage(themeId: string): Promise<ExportResult>;
+    importPackage(path?: string): Promise<Theme | null>;
+    revealFile(path: string): Promise<void>;
     pathForFile(file: File): string;
     onChanged(cb: () => void): () => void;
+    onImported(cb: (info: ImportedThemeInfo) => void): () => void;
   };
   desktop: {
     apply(themeId: string): Promise<ApplyResult>;
@@ -213,13 +190,6 @@ export interface DeskforgeApi {
   perf: {
     probe(theme: Theme, seconds: number): Promise<MeasuredReport>;
     onProgress(cb: (p: PerfProgress) => void): () => void;
-  };
-  steam: {
-    status(): Promise<SteamStatus>;
-    publish(req: PublishRequest): Promise<PublishResult>;
-    onPublishProgress(cb: (p: PublishProgress) => void): () => void;
-    subscribed(): Promise<SubscribedItem[]>;
-    openItem(workshopId: string): Promise<void>;
   };
   settings: {
     get(): Promise<Settings>;

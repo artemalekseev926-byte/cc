@@ -26,16 +26,20 @@ jobs:
 
       - run: npm test
 
-      - run: npm run dist:zip
+      - run: npm run dist:win
 
       - uses: actions/upload-artifact@v4
         with:
-          name: DeskForge-win-x64
-          path: release/DeskForge-*-win-x64.zip
+          name: DeskForge-Windows
+          path: |
+            release/DeskForge-Setup-*.exe
+            release/DeskForge-*-portable.exe
           retention-days: 30
 
       - if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: release/DeskForge-*-win-x64.zip
+          files: |
+            release/DeskForge-Setup-*.exe
+            release/DeskForge-*-portable.exe
           generate_release_notes: true

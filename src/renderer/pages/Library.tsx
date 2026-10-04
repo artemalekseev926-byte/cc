@@ -11,7 +11,7 @@ import { DesktopPreview } from '../components/DesktopPreview';
 import { RatingBadge } from '../components/PerfMeter';
 import { Button, Empty, Modal, Segmented, Tip } from '../components/ui';
 
-type Filter = 'all' | 'local' | 'workshop' | 'builtin';
+type Filter = 'all' | 'local' | 'builtin';
 
 export function summarizeApply(result: ApplyResult, t: TFunction): string {
   const applied = result.steps.filter((s) => s.status === 'applied').length;
@@ -54,7 +54,18 @@ export function useThemeActions() {
       toast('success', t('library.deleted'));
     },
     perf: (id: string) => go('performance', id),
-    publish: (id: string) => go('workshop', id),
+    share: (id: string) => go('share', id),
+    async exportFile(id: string) {
+      try {
+        const res = await api.themes.exportPackage(id);
+        if (res.ok && res.path) {
+          toast('success', t('share.exported', { mb: ((res.bytes ?? 0) / 1024 / 1024).toFixed(1) }));
+          void api.themes.revealFile(res.path);
+        }
+      } catch (err) {
+        toast('error', String(err));
+      }
+    },
   };
 }
 
@@ -103,7 +114,6 @@ export function Library() {
           options={[
             { value: 'all', label: t('library.filter.all') },
             { value: 'local', label: t('library.filter.local') },
-            { value: 'workshop', label: t('library.filter.workshop') },
             { value: 'builtin', label: t('library.filter.builtin') },
           ]}
         />
@@ -172,8 +182,8 @@ function ThemeCard({ summary, active, displayWidth }: { summary: ThemeSummary; a
             </button>
             {summary.source === 'local' && (
               <>
-                <button type="button" onClick={() => actions.publish(summary.id)}>
-                  ☁️ {t('library.publish')}
+                <button type="button" onClick={() => void actions.exportFile(summary.id)}>
+                  📦 {t('library.export')}
                 </button>
                 <button type="button" onClick={() => void api.themes.openFolder(summary.id)}>
                   📂 {t('library.openFolder')}
@@ -182,11 +192,6 @@ function ThemeCard({ summary, active, displayWidth }: { summary: ThemeSummary; a
                   🗑 {t('library.delete')}
                 </button>
               </>
-            )}
-            {summary.source === 'workshop' && summary.workshopId && (
-              <button type="button" onClick={() => void api.steam.openItem(summary.workshopId!)}>
-                🔗 {t('library.openInSteam')}
-              </button>
             )}
           </div>
         </div>

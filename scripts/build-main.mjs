@@ -8,7 +8,7 @@ const common = {
   target: 'node22',
   format: 'cjs',
   sourcemap: true,
-  external: ['electron', 'koffi', 'steamworks.js'],
+  external: ['electron', 'koffi'],
   logLevel: 'info',
 };
 

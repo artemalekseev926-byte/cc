@@ -15,7 +15,7 @@ export function collectKeys(root = 'src') {
       for (const m of src.matchAll(/\bt\(\s*'([a-zA-Z0-9_.-]+)'/g)) keys.add(m[1]);
       for (const m of src.matchAll(/(?:key|problem|warning|what|reason|blurbKey|error):\s*'([a-z][a-zA-Z0-9]*\.[a-zA-Z0-9_.-]+)'/g)) keys.add(m[1]);
       for (const m of src.matchAll(/\b(?:step|preset)\(\s*'([a-z][a-zA-Z0-9]*\.[a-zA-Z0-9_.]+)'/g)) keys.add(m[1]);
-      for (const m of src.matchAll(/'((?:apply|steam|check|rec|import)\.[a-zA-Z0-9_.]+)'/g)) keys.add(m[1]);
+      for (const m of src.matchAll(/'((?:apply|check|rec|import|share)\.[a-zA-Z0-9_.]+)'/g)) keys.add(m[1]);
     }
   };
   walk(root);

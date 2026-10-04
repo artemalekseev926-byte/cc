@@ -2,14 +2,11 @@
   "name": "deskforge",
   "productName": "DeskForge",
   "version": "0.1.0",
-  "description": "DeskForge — desktop customization studio: animated wallpapers, colors, window styles, taskbar layout, a beginner-friendly editor, Steam Workshop publishing and a performance preview.",
+  "description": "DeskForge — desktop customization studio: animated wallpapers, colors, window styles, taskbar layout, a beginner-friendly editor, theme sharing and a performance preview.",
   "main": "dist/main/main.cjs",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
-  "deskforge": {
-    "steamAppId": 480
-  },
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "npm run build:renderer && npm run build:main",
@@ -18,15 +15,15 @@
     "start": "npm run build && electron .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "dist:win": "npm run build && node scripts/ensure-win-natives.mjs && electron-builder --win dir",
-    "dist:linux": "npm run build && electron-builder --linux dir",
-    "dist:zip": "npm run dist:win && node scripts/zip-release.mjs"
+    "dist:win": "npm run build && node scripts/ensure-win-natives.mjs && electron-builder --win",
+    "dist:linux": "npm run build && electron-builder --linux dir"
   },
   "dependencies": {
     "koffi": "^3.3.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "steamworks.js": "^0.4.0",
+    "yauzl": "^3.4.0",
+    "yazl": "^3.3.1",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"
   },
@@ -34,6 +31,8 @@
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/yauzl": "^3.4.0",
+    "@types/yazl": "^3.3.1",
     "@vitejs/plugin-react": "^6.1.1",
     "electron": "^44.5.1",
     "electron-builder": "^26.15.3",

@@ -6,7 +6,7 @@ import { themeFileUrl } from '../../shared/ipc';
 import type { Layer, Theme } from '../../shared/theme/schema';
 import { api } from './api';
 
-export type Route = 'library' | 'editor' | 'workshop' | 'performance' | 'settings';
+export type Route = 'library' | 'editor' | 'share' | 'performance' | 'settings';
 export type InspectorSection = 'layer' | 'colors' | 'windows' | 'taskbar' | 'desktop' | 'performance' | 'info';
 
 export interface Toast {

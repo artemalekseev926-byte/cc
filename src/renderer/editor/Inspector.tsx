@@ -16,7 +16,7 @@ import type {
   VideoLayer,
   WidgetPosition,
 } from '../../shared/theme/schema';
-import { WORKSHOP_TAGS } from '../../shared/workshop/validate';
+import { THEME_TAGS } from '../../shared/sharing/validate';
 import { useT, type TFunction } from '../app/i18n';
 import { extractAccent } from '../app/media';
 import { useEditingTheme, useStudio, type InspectorSection } from '../app/store';
@@ -626,7 +626,7 @@ function InfoSection({ theme }: { theme: Theme }) {
       </Field>
       <Field label={t('info.tags')} hint={t('info.tagsHint')}>
         <div className="tag-picker">
-          {WORKSHOP_TAGS.map((tag) => {
+          {THEME_TAGS.map((tag) => {
             const on = theme.tags.includes(tag);
             return (
               <button

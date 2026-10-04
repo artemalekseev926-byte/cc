@@ -9,6 +9,7 @@ export const LIMITS = {
   videoMaxBytes: 1024 * 1024 * 1024,
   maxFilesPerTheme: 16,
   previewMaxBytes: 1024 * 1024,
+  packageMaxBytes: 2 * 1024 * 1024 * 1024,
 };
 
 export type ImportKind = 'image' | 'video' | 'theme' | 'unsupported';
@@ -33,7 +34,7 @@ export function extensionOf(name: string): string {
 
 export function classifyFile(file: ImportCandidate): ClassifiedFile {
   const ext = extensionOf(file.name);
-  if (file.name.toLowerCase() === 'theme.json') return { ...file, ext, kind: 'theme' };
+  if (file.name.toLowerCase() === 'theme.json' || ext === 'deskforge') return { ...file, ext, kind: 'theme' };
   if ((IMAGE_EXTENSIONS as readonly string[]).includes(ext)) {
     if (file.bytes > LIMITS.imageMaxBytes) return { ...file, ext, kind: 'image', problem: 'import.problem.imageTooBig' };
     return { ...file, ext, kind: 'image', warning: ext === 'gif' ? 'import.warn.gif' : undefined };

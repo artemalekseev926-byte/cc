@@ -71,11 +71,15 @@ function createMockApi(): DeskforgeApi {
       folderSize: async () => 1024 * 1024,
       openFolder: async () => undefined,
       pickFiles: async () => [],
+      exportPackage: async () => ({ ok: false }),
+      importPackage: async () => null,
+      revealFile: async () => undefined,
       pathForFile: () => '',
       onChanged: (cb) => {
         listeners.add(cb);
         return () => listeners.delete(cb);
       },
+      onImported: noop,
     },
     desktop: {
       apply: async () => ({ ok: true, steps: [{ what: 'apply.accent', status: 'applied' }], explorerRestarted: false }),
@@ -100,13 +104,6 @@ function createMockApi(): DeskforgeApi {
         return buildMeasuredReport(samples, frameStatsFromTimes(frames, theme.wallpaper.fpsLimit), theme.wallpaper.fpsLimit, 200, 8);
       },
       onProgress: noop,
-    },
-    steam: {
-      status: async () => ({ available: false, appId: 480, reason: 'steam.notRunning' }),
-      publish: async () => ({ ok: false, error: 'steam.notRunning' }),
-      onPublishProgress: noop,
-      subscribed: async () => [],
-      openItem: async () => undefined,
     },
     settings: {
       get: async () => settings,

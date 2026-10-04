@@ -3,7 +3,7 @@ import { collectKeys } from '../scripts/i18n-keys.mjs';
 import { CATEGORY_ORDER, TOOLS } from '../src/shared/editor/tools';
 import { DICTIONARIES, resolveLang, translate } from '../src/shared/i18n';
 import { PRESETS } from '../src/shared/theme/presets';
-import { WORKSHOP_TAGS } from '../src/shared/workshop/validate';
+import { THEME_TAGS } from '../src/shared/sharing/validate';
 
 function dynamicKeys(): string[] {
   const keys: string[] = [];
@@ -24,12 +24,12 @@ function dynamicKeys(): string[] {
   add('rating.', ratings);
   add('rating.', ratings, '.desc');
   add('check.perf.', ratings);
-  add('library.source.', ['builtin', 'local', 'workshop']);
-  add('nav.', ['library', 'editor', 'workshop', 'performance', 'settings']);
+  add('library.source.', ['builtin', 'local']);
+  add('nav.', ['library', 'editor', 'share', 'performance', 'settings']);
   add('status.paused.', ['fullscreen', 'battery', 'manual']);
-  add('tag.', WORKSHOP_TAGS);
+  add('tag.', THEME_TAGS);
   add('taskbar.', ['bottom', 'top', 'left', 'right']);
-  add('publish.stage.', ['creating', 'preparing', 'uploading', 'preview', 'committing', 'done', 'error']);
+  add('import.package.', ['invalid', 'unsafe', 'tooBig']);
   add('perf.phase.', ['starting', 'warmup', 'measuring', 'done']);
   add('import.kind.', ['image', 'video', 'theme', 'unsupported']);
   keys.push('caps.windowsOnly', 'caps.needsWin11', 'common.error');

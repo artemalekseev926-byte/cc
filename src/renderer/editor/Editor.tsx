@@ -122,7 +122,7 @@ export function Editor() {
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const paths = [...e.dataTransfer.files].map((f) => api.themes.pathForFile(f)).filter(Boolean);
+    const paths = [...e.dataTransfer.files].map((f) => api.themes.pathForFile(f)).filter((p) => p && !p.toLowerCase().endsWith('.deskforge'));
     if (paths.length) await importMediaFiles(paths, t);
   };
 

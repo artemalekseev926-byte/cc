@@ -26,8 +26,12 @@ const api: DeskforgeApi = {
     folderSize: (themeId) => invoke(IPC.themesFolderSize, themeId),
     openFolder: (themeId) => invoke(IPC.themesOpenFolder, themeId),
     pickFiles: (kind) => invoke(IPC.themesPickFiles, kind),
+    exportPackage: (themeId) => invoke(IPC.themesExportPackage, themeId),
+    importPackage: (path) => invoke(IPC.themesImportPackage, path),
+    revealFile: (path) => invoke(IPC.themesRevealFile, path),
     pathForFile: (file) => webUtils.getPathForFile(file),
     onChanged: (cb) => listen(IPC.libraryChanged, cb),
+    onImported: (cb) => listen(IPC.themesImported, cb),
   },
   desktop: {
     apply: (themeId) => invoke(IPC.desktopApply, themeId),
@@ -40,13 +44,6 @@ const api: DeskforgeApi = {
   perf: {
     probe: (theme, seconds) => invoke(IPC.perfProbe, theme, seconds),
     onProgress: (cb) => listen(IPC.perfProgress, cb),
-  },
-  steam: {
-    status: () => invoke(IPC.steamStatus),
-    publish: (req) => invoke(IPC.steamPublish, req),
-    onPublishProgress: (cb) => listen(IPC.steamPublishProgress, cb),
-    subscribed: () => invoke(IPC.steamSubscribed),
-    openItem: (id) => invoke(IPC.steamOpenItem, id),
   },
   settings: {
     get: () => invoke(IPC.settingsGet),

@@ -39,11 +39,10 @@ describe('theme schema', () => {
     if (!result.ok) expect(result.errors[0]).toContain('ghost');
   });
 
-  it('cloneTheme gives fresh layer ids and drops the workshop id', () => {
-    const source = { ...PRESETS[0].theme, workshopId: '123' };
+  it('cloneTheme gives fresh layer ids', () => {
+    const source = PRESETS[0].theme;
     const copy = cloneTheme(source, 'copy-id', 'Copy');
     expect(copy.id).toBe('copy-id');
-    expect(copy.workshopId).toBeUndefined();
     const sourceIds = new Set(source.wallpaper.layers.map((l) => l.id));
     expect(copy.wallpaper.layers.every((l) => !sourceIds.has(l.id))).toBe(true);
   });

@@ -160,7 +160,6 @@ export const ThemeSchema = z.object({
   description: z.string().max(4000).default(''),
   tags: z.array(z.string().max(32)).max(12).default([]),
   version: z.string().default('1.0.0'),
-  workshopId: z.string().regex(/^\d+$/).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
   wallpaper: WallpaperSchema,

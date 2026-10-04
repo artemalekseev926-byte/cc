@@ -2,7 +2,7 @@ import type { Tool } from '../../shared/editor/tools';
 import { themeFileUrl } from '../../shared/ipc';
 import { createLayer, createParticlesLayer, createShaderLayer, createImageLayer, createVideoLayer } from '../../shared/theme/factory';
 import type { Layer, ParticlePreset, ShaderPreset } from '../../shared/theme/schema';
-import { humanizeFileName } from '../../shared/workshop/import';
+import { humanizeFileName } from '../../shared/sharing/import';
 import { api } from '../app/api';
 import type { TFunction } from '../app/i18n';
 import { probeMedia } from '../app/media';

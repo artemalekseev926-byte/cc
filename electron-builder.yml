@@ -1,5 +1,6 @@
 appId: com.deskforge.app
 productName: DeskForge
+copyright: Copyright © 2026 DeskForge
 directories:
   output: release
 files:
@@ -8,13 +9,34 @@ files:
   - "!**/*.map"
 asarUnpack:
   - node_modules/koffi/**
-  - node_modules/steamworks.js/**
+  - node_modules/@koromix/**
 extraResources:
   - from: build/icon.png
     to: icon.png
+fileAssociations:
+  - ext: deskforge
+    name: DeskForge Theme
+    description: DeskForge Theme
+    icon: build/icon.png
+    role: Viewer
 win:
-  target: dir
   icon: build/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+nsis:
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: DeskForge
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+  artifactName: DeskForge-Setup-${version}.exe
+portable:
+  artifactName: DeskForge-${version}-portable.exe
 linux:
   target: dir
   icon: build/icon.png

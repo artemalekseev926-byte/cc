@@ -1,14 +1,14 @@
-import { BrowserWindow, dialog, ipcMain, screen, shell } from 'electron';
-import { IPC, themeFileUrl, type PublishRequest, type Settings } from '../shared/ipc';
+import { join } from 'node:path';
+import { app, BrowserWindow, dialog, ipcMain, screen, shell } from 'electron';
+import { IPC, themeFileUrl, type Settings } from '../shared/ipc';
 import { estimateTheme } from '../shared/perf/estimator';
 import { parseTheme, type Theme } from '../shared/theme/schema';
-import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '../shared/workshop/import';
-import { workshopDescription } from '../shared/workshop/validate';
+import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '../shared/sharing/import';
+import { PACKAGE_EXT, packageFileName } from '../shared/sharing/package';
 import { probeTheme } from './perfProbe';
 import type { PlatformAdapter } from './platform';
 import type { SettingsStore } from './settings';
-import type { SteamService } from './steam';
-import { PREVIEW_FILE, type ThemeStore } from './storage';
+import type { ThemeStore } from './storage';
 import type { WallpaperHost } from './wallpaperHost';
 
 export interface Services {
@@ -16,7 +16,7 @@ export interface Services {
   settings: SettingsStore;
   platform: PlatformAdapter;
   host: WallpaperHost;
-  steam: SteamService;
+  importPackage: (path: string) => Promise<unknown>;
   studioWindow: () => BrowserWindow | null;
   applySettingsSideEffects: (s: Settings) => void;
 }
@@ -52,7 +52,6 @@ export function registerIpc(s: Services): void {
   );
 
   ipcMain.handle(IPC.themesList, async () => {
-    s.store.setWorkshopItems(s.steam.installedItems());
     return s.store.list();
   });
   ipcMain.handle(IPC.themesLoad, (_e, id: string) => s.store.load(String(id)));
@@ -103,11 +102,37 @@ export function registerIpc(s: Services): void {
         ? [{ name: 'Images', extensions: [...IMAGE_EXTENSIONS] }]
         : kind === 'video'
           ? [{ name: 'Videos', extensions: [...VIDEO_EXTENSIONS] }]
-          : [{ name: 'Media', extensions: [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS, 'json'] }];
+          : [{ name: 'Media', extensions: [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS, 'json', PACKAGE_EXT] }];
     const options: Electron.OpenDialogOptions = { properties: ['openFile', 'multiSelections'], filters };
     const res = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
     return res.canceled ? [] : res.filePaths;
   });
+
+  ipcMain.handle(IPC.themesExportPackage, async (event, themeId: string) => {
+    const theme = await s.store.load(String(themeId));
+    const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    const options: Electron.SaveDialogOptions = {
+      defaultPath: join(app.getPath('documents'), packageFileName(theme.name)),
+      filters: [{ name: 'DeskForge Theme', extensions: [PACKAGE_EXT] }],
+    };
+    const res = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
+    if (res.canceled || !res.filePath) return { ok: false };
+    const path = res.filePath.toLowerCase().endsWith(`.${PACKAGE_EXT}`) ? res.filePath : `${res.filePath}.${PACKAGE_EXT}`;
+    const bytes = await s.store.exportPackage(theme.id, path);
+    return { ok: true, path, bytes };
+  });
+  ipcMain.handle(IPC.themesImportPackage, async (event, path?: string) => {
+    let file = typeof path === 'string' && path ? path : null;
+    if (!file) {
+      const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+      const options: Electron.OpenDialogOptions = { properties: ['openFile'], filters: [{ name: 'DeskForge Theme', extensions: [PACKAGE_EXT] }] };
+      const res = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
+      if (res.canceled || res.filePaths.length === 0) return null;
+      file = res.filePaths[0];
+    }
+    return s.importPackage(file);
+  });
+  ipcMain.handle(IPC.themesRevealFile, (_e, path: string) => shell.showItemInFolder(String(path)));
 
   ipcMain.handle(IPC.desktopApply, async (_e, themeId: string) => {
     const theme = await s.store.load(String(themeId));
@@ -138,38 +163,6 @@ export function registerIpc(s: Services): void {
     } finally {
       s.host.suspendForProbe(false);
     }
-  });
-
-  ipcMain.handle(IPC.steamStatus, () => s.steam.status());
-  ipcMain.handle(IPC.steamSubscribed, () => s.steam.subscribed());
-  ipcMain.handle(IPC.steamOpenItem, (_e, id: string) => s.steam.openItem(String(id)));
-  ipcMain.handle(IPC.steamPublish, async (event, req: PublishRequest) => {
-    const theme = await s.store.load(String(req.themeId));
-    if (s.store.sourceOf(theme.id) !== 'local') return { ok: false, error: 'steam.onlyLocal' };
-    const previewBytes = await s.store.previewBytes(theme.id);
-    if (previewBytes === null) return { ok: false, error: 'check.noPreview' };
-    theme.name = req.title.trim();
-    theme.description = req.description;
-    theme.tags = req.tags.slice(0, 12);
-    if (!theme.author) theme.author = s.steam.status().userName ?? s.settings.get().authorName;
-    await s.store.save(theme);
-
-    const display = primaryDisplayInfo();
-    const result = await s.steam.publish(
-      req,
-      theme.workshopId,
-      s.store.dirOf(theme.id)!,
-      s.store.resolveThemeFile(theme.id, PREVIEW_FILE)!,
-      workshopDescription(req.description, theme, display),
-      async (workshopId) => {
-        theme.workshopId = workshopId;
-        await s.store.save(theme);
-      },
-      (p) => event.sender.send(IPC.steamPublishProgress, p),
-    );
-    if (result.needsToAcceptAgreement) await s.steam.openWorkshopAgreement();
-    notifyLibrary();
-    return result;
   });
 
   ipcMain.handle(IPC.settingsGet, () => s.settings.get());

@@ -1,43 +1,31 @@
-import { promises as fs } from 'node:fs';
+import { createWriteStream, promises as fs } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import yauzl from 'yauzl';
+import yazl from 'yazl';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { ImportArtworkResult, ThemeSource, ThemeSummary } from '../shared/ipc';
 import { themeFileUrl } from '../shared/ipc';
 import { cloneTheme } from '../shared/theme/factory';
 import { PRESETS, isBuiltinTheme } from '../shared/theme/presets';
 import { parseTheme, slugify, type Asset, type Theme } from '../shared/theme/schema';
-import { assetKeyFor, buildThemeFromArtwork, classifyFile, type ClassifiedFile } from '../shared/workshop/import';
+import { PACKAGE_EXT, PACKAGE_MAX_ENTRIES, isSafePackageEntry } from '../shared/sharing/package';
+import { LIMITS, assetKeyFor, buildThemeFromArtwork, classifyFile, type ClassifiedFile } from '../shared/sharing/import';
 
 export const PREVIEW_FILE = 'preview.jpg';
 
-interface WorkshopEntry {
-  dir: string;
-  workshopId: string;
-}
-
 export class ThemeStore {
-  private workshop = new Map<string, WorkshopEntry>();
-
   constructor(private readonly themesDir: string) {}
 
   async init(): Promise<void> {
     await fs.mkdir(this.themesDir, { recursive: true });
   }
 
-  setWorkshopItems(items: Array<{ workshopId: string; folder: string }>): void {
-    this.workshop.clear();
-    for (const item of items) this.workshop.set(`ws-${item.workshopId}`, { dir: item.folder, workshopId: item.workshopId });
-  }
-
   sourceOf(id: string): ThemeSource {
-    if (isBuiltinTheme(id)) return 'builtin';
-    if (this.workshop.has(id)) return 'workshop';
-    return 'local';
+    return isBuiltinTheme(id) ? 'builtin' : 'local';
   }
 
   dirOf(id: string): string | null {
     if (isBuiltinTheme(id)) return null;
-    const ws = this.workshop.get(id);
-    if (ws) return ws.dir;
     if (!/^[a-z0-9][a-z0-9-]{1,63}$/.test(id)) return null;
     return join(this.themesDir, id);
   }
@@ -60,14 +48,6 @@ export class ThemeStore {
       const theme = await this.readThemeFile(join(this.themesDir, entry.name)).catch(() => null);
       if (theme && theme.id === entry.name) out.push(this.summary(theme, 'local', await this.hasPreview(theme.id)));
     }
-
-    for (const [id, ws] of this.workshop) {
-      const theme = await this.readThemeFile(ws.dir).catch(() => null);
-      if (!theme) continue;
-      theme.id = id;
-      theme.workshopId = ws.workshopId;
-      out.push(this.summary(theme, 'workshop', await this.hasPreview(id)));
-    }
     return out;
   }
 
@@ -78,7 +58,6 @@ export class ThemeStore {
       author: theme.author,
       tags: theme.tags,
       source,
-      workshopId: theme.workshopId,
       updatedAt: theme.updatedAt,
       previewUrl: preview ? `${themeFileUrl(theme.id, PREVIEW_FILE)}?v=${encodeURIComponent(theme.updatedAt ?? '')}` : undefined,
       theme,
@@ -102,17 +81,11 @@ export class ThemeStore {
     if (preset) return JSON.parse(JSON.stringify(preset.theme));
     const dir = this.dirOf(id);
     if (!dir) throw new Error(`Unknown theme ${id}`);
-    const theme = await this.readThemeFile(dir);
-    const ws = this.workshop.get(id);
-    if (ws) {
-      theme.id = id;
-      theme.workshopId = ws.workshopId;
-    }
-    return theme;
+    return this.readThemeFile(dir);
   }
 
   async save(theme: Theme): Promise<void> {
-    if (this.sourceOf(theme.id) !== 'local') throw new Error('Built-in and Workshop themes are read-only; duplicate first.');
+    if (this.sourceOf(theme.id) !== 'local') throw new Error('Built-in themes are read-only; duplicate first.');
     const parsed = parseTheme({ ...theme, updatedAt: new Date().toISOString() });
     if (!parsed.ok) throw new Error(parsed.errors.join('\n'));
     const dir = this.dirOf(theme.id)!;
@@ -180,6 +153,9 @@ export class ThemeStore {
       files.push(classifyFile({ path, name: basename(path), bytes: stat.size }));
     }
 
+    const pkg = files.find((f) => f.kind === 'theme' && f.ext === PACKAGE_EXT);
+    if (pkg) return { theme: await this.importPackage(pkg.path), files };
+
     const themeJson = files.find((f) => f.kind === 'theme');
     if (themeJson) {
       const srcDir = dirname(themeJson.path);
@@ -188,7 +164,6 @@ export class ThemeStore {
       const dstDir = join(this.themesDir, id);
       await fs.cp(srcDir, dstDir, { recursive: true });
       source.id = id;
-      source.workshopId = undefined;
       await this.save(source);
       return { theme: source, files };
     }
@@ -237,4 +212,81 @@ export class ThemeStore {
     };
     return walk(dir);
   }
+
+  async exportPackage(themeId: string, destination: string): Promise<number> {
+    const theme = await this.load(themeId);
+    const dir = this.dirOf(themeId);
+    const zip = new yazl.ZipFile();
+    zip.addBuffer(Buffer.from(JSON.stringify(theme, null, 2), 'utf8'), 'theme.json');
+    if (dir) {
+      const preview = join(dir, PREVIEW_FILE);
+      if (await fs.stat(preview).then((st) => st.isFile(), () => false)) zip.addFile(preview, PREVIEW_FILE, { compress: false });
+      for (const asset of Object.values(theme.assets)) {
+        const file = this.resolveThemeFile(themeId, asset.file);
+        if (file && isSafePackageEntry(asset.file)) zip.addFile(file, asset.file, { compress: false });
+      }
+    }
+    zip.end();
+    const tmp = `${destination}.${process.pid}.tmp`;
+    await new Promise<void>((resolveWrite, reject) => {
+      const out = createWriteStream(tmp);
+      zip.outputStream.on('error', reject).pipe(out).on('error', reject).on('close', () => resolveWrite());
+    });
+    await fs.rename(tmp, destination);
+    return (await fs.stat(destination)).size;
+  }
+
+  async importPackage(packagePath: string): Promise<Theme> {
+    const staging = join(this.themesDir, `.import-${randomBytes(6).toString('hex')}`);
+    await fs.mkdir(join(staging, 'assets'), { recursive: true });
+    try {
+      await extractPackage(packagePath, staging);
+      const theme = await this.readThemeFile(staging);
+      const id = await this.uniqueId(theme.name);
+      await fs.rename(staging, join(this.themesDir, id));
+      theme.id = id;
+      await this.save(theme);
+      return theme;
+    } catch (err) {
+      await fs.rm(staging, { recursive: true, force: true });
+      throw err;
+    }
+  }
+}
+
+function extractPackage(packagePath: string, target: string): Promise<void> {
+  return new Promise((resolveExtract, reject) => {
+    yauzl.open(packagePath, { lazyEntries: true, validateEntrySizes: true }, (openErr, zip) => {
+      if (openErr || !zip) return reject(openErr ?? new Error('import.package.invalid'));
+      let entries = 0;
+      let total = 0;
+      let failed = false;
+      const fail = (err: Error) => {
+        if (failed) return;
+        failed = true;
+        zip.close();
+        reject(err);
+      };
+      zip.on('error', fail);
+      zip.on('end', () => {
+        if (!failed) resolveExtract();
+      });
+      zip.on('entry', (entry: yauzl.Entry) => {
+        if (entry.fileName.endsWith('/')) return zip.readEntry();
+        entries++;
+        total += entry.uncompressedSize;
+        if (!isSafePackageEntry(entry.fileName)) return fail(new Error('import.package.unsafe'));
+        if (entries > PACKAGE_MAX_ENTRIES || total > LIMITS.packageMaxBytes) return fail(new Error('import.package.tooBig'));
+        zip.openReadStream(entry, (streamErr, stream) => {
+          if (streamErr || !stream) return fail(streamErr ?? new Error('import.package.invalid'));
+          const out = createWriteStream(join(target, entry.fileName));
+          stream.on('error', fail);
+          out.on('error', fail);
+          out.on('close', () => zip.readEntry());
+          stream.pipe(out);
+        });
+      });
+      zip.readEntry();
+    });
+  });
 }

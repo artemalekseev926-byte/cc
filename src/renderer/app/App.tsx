@@ -3,7 +3,8 @@ import { Editor } from '../editor/Editor';
 import { Library, NewThemeDialog } from '../pages/Library';
 import { Performance } from '../pages/Performance';
 import { SettingsPage } from '../pages/Settings';
-import { Workshop } from '../pages/Workshop';
+import { Share, errorKey } from '../pages/Share';
+import { api } from './api';
 import { Button, Field, Modal, Segmented, Toggle } from '../components/ui';
 import { useT } from './i18n';
 import { useStudio, type Route } from './store';
@@ -11,7 +12,7 @@ import { useStudio, type Route } from './store';
 const NAV: Array<{ route: Route; icon: string }> = [
   { route: 'library', icon: '🖼️' },
   { route: 'editor', icon: '✏️' },
-  { route: 'workshop', icon: '☁️' },
+  { route: 'share', icon: '📦' },
   { route: 'performance', icon: '⚡' },
   { route: 'settings', icon: '⚙️' },
 ];
@@ -26,6 +27,29 @@ export function App() {
     void init().then(() => setReady(true));
   }, [init]);
 
+  useEffect(
+    () =>
+      api.themes.onImported((info) => {
+        useStudio.getState().toast('success', t('share.imported', { name: info.name }));
+        useStudio.getState().go('library');
+      }),
+    [t],
+  );
+
+  const onDropPackages = async (e: React.DragEvent) => {
+    const paths = [...e.dataTransfer.files].map((f) => api.themes.pathForFile(f)).filter((p) => p.toLowerCase().endsWith('.deskforge'));
+    if (paths.length === 0) return;
+    e.preventDefault();
+    for (const path of paths) {
+      try {
+        const theme = await api.themes.importPackage(path);
+        if (theme) useStudio.getState().toast('success', t('share.imported', { name: theme.name }));
+      } catch (err) {
+        useStudio.getState().toast('error', t(errorKey(err)));
+      }
+    }
+  };
+
   const navigate = (r: Route) => {
     if (route === 'editor' && r !== 'editor' && editor.dirty && !window.confirm(t('editor.leaveUnsaved'))) return;
     go(r);
@@ -35,7 +59,7 @@ export function App() {
   const active = library.find((s) => s.id === desktop.activeThemeId);
 
   return (
-    <div className="app">
+    <div className="app" onDragOver={(e) => e.preventDefault()} onDrop={(e) => void onDropPackages(e)}>
       <nav className="sidebar">
         <div className="brand">
           <span className="brand-mark">◆</span>
@@ -62,7 +86,7 @@ export function App() {
       <main className="content">
         {route === 'library' && <Library />}
         {route === 'editor' && <Editor />}
-        {route === 'workshop' && <Workshop />}
+        {route === 'share' && <Share />}
         {route === 'performance' && <Performance />}
         {route === 'settings' && <SettingsPage />}
       </main>

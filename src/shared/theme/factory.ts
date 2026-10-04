@@ -142,7 +142,6 @@ export function cloneTheme(theme: Theme, id: string, name: string): Theme {
   const now = new Date().toISOString();
   copy.id = id;
   copy.name = name;
-  copy.workshopId = undefined;
   copy.createdAt = now;
   copy.updatedAt = now;
   copy.wallpaper.layers = copy.wallpaper.layers.map((layer) => ({ ...layer, id: newId() }));
