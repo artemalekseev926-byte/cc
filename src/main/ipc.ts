@@ -1,9 +1,11 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, screen, shell } from 'electron';
-import { IPC, themeFileUrl, type Settings } from '../shared/ipc';
+import { IPC, controlsFromSettings, themeFileUrl, type Settings } from '../shared/ipc';
+import { isValidTweakValue, type TweakId } from '../shared/system/tweaks';
+import { appsStatus, installApp, uninstallApp } from './apps';
 import { estimateTheme } from '../shared/perf/estimator';
 import { parseTheme, type Theme } from '../shared/theme/schema';
-import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '../shared/sharing/import';
+import { AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from '../shared/sharing/import';
 import { PACKAGE_EXT, packageFileName } from '../shared/sharing/package';
 import { probeTheme } from './perfProbe';
 import type { PlatformAdapter } from './platform';
@@ -17,6 +19,7 @@ export interface Services {
   platform: PlatformAdapter;
   host: WallpaperHost;
   importPackage: (path: string) => Promise<unknown>;
+  broadcast: (channel: string, payload?: unknown) => void;
   studioWindow: () => BrowserWindow | null;
   applySettingsSideEffects: (s: Settings) => void;
 }
@@ -38,7 +41,6 @@ function primaryDisplayInfo() {
 
 export function registerIpc(s: Services): void {
   const notifyLibrary = () => s.studioWindow()?.webContents.send(IPC.libraryChanged);
-  s.host.onStatus((status) => s.studioWindow()?.webContents.send(IPC.desktopStatusChanged, status));
 
   ipcMain.handle(IPC.platformCapabilities, () => s.platform.capabilities());
   ipcMain.handle(IPC.platformDisplays, () =>
@@ -95,14 +97,16 @@ export function registerIpc(s: Services): void {
     const dir = s.store.dirOf(String(themeId));
     if (dir) await shell.openPath(dir);
   });
-  ipcMain.handle(IPC.themesPickFiles, async (event, kind: 'image' | 'video' | 'any') => {
+  ipcMain.handle(IPC.themesPickFiles, async (event, kind: 'image' | 'video' | 'audio' | 'any') => {
     const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
     const filters =
       kind === 'image'
         ? [{ name: 'Images', extensions: [...IMAGE_EXTENSIONS] }]
         : kind === 'video'
           ? [{ name: 'Videos', extensions: [...VIDEO_EXTENSIONS] }]
-          : [{ name: 'Media', extensions: [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS, 'json', PACKAGE_EXT] }];
+          : kind === 'audio'
+            ? [{ name: 'Audio', extensions: [...AUDIO_EXTENSIONS] }]
+            : [{ name: 'Media', extensions: [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, 'json', PACKAGE_EXT] }];
     const options: Electron.OpenDialogOptions = { properties: ['openFile', 'multiSelections'], filters };
     const res = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
     return res.canceled ? [] : res.filePaths;
@@ -154,6 +158,17 @@ export function registerIpc(s: Services): void {
     return s.platform.restoreOriginal();
   });
   ipcMain.handle(IPC.desktopStatus, () => s.host.status());
+  ipcMain.handle(IPC.desktopSetPaused, (_e, paused: boolean) => s.host.setManualPause(Boolean(paused)));
+
+  ipcMain.handle(IPC.systemTweaks, () => s.platform.tweaks());
+  ipcMain.handle(IPC.systemSetTweak, (_e, id: string, value: unknown) => {
+    if (!isValidTweakValue(String(id), value)) return { ok: false, error: 'unknown', restartExplorer: false };
+    return s.platform.setTweak(id as TweakId, value);
+  });
+  ipcMain.handle(IPC.systemRestartExplorer, () => s.platform.restartExplorer());
+  ipcMain.handle(IPC.appsStatus, () => appsStatus());
+  ipcMain.handle(IPC.appsInstall, (_e, id: string) => installApp(String(id)));
+  ipcMain.handle(IPC.appsUninstall, (_e, id: string) => uninstallApp(String(id)));
 
   ipcMain.handle(IPC.perfProbe, async (event, theme: unknown, seconds: number) => {
     const t = requireTheme(theme);
@@ -169,6 +184,8 @@ export function registerIpc(s: Services): void {
   ipcMain.handle(IPC.settingsSet, async (_e, patch: Partial<Settings>) => {
     const next = await s.settings.set(patch ?? {});
     s.applySettingsSideEffects(next);
+    s.host.setControls(controlsFromSettings(next));
+    s.broadcast(IPC.settingsChanged, next);
     return next;
   });
 }

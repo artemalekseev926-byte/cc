@@ -13,6 +13,10 @@ asarUnpack:
 extraResources:
   - from: build/icon.png
     to: icon.png
+  - from: build/tray.png
+    to: tray.png
+  - from: build/tray@2x.png
+    to: tray@2x.png
 fileAssociations:
   - ext: deskforge
     name: DeskForge Theme

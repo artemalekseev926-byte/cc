@@ -7,7 +7,8 @@ import { accentPalette, shade, toAbgr, toArgb, toColorRef } from '../../shared/c
 import type { ApplyResult, ApplyStep, PlatformCapabilities } from '../../shared/ipc';
 import type { Theme, WindowsStyle } from '../../shared/theme/schema';
 import { win32 } from '../win32/api';
-import { KEYS, binary, dword, regDelete, regGet, regSet, type RegValue } from '../win32/registry';
+import { KEYS, binary, dword, regDelete, regDeleteKey, regGet, regKeyExists, regSet, regSetDefault, sz, type RegValue } from '../win32/registry';
+import { TWEAKS, type SetTweakResult, type TweakId, type TweakState, type TweakValue } from '../../shared/system/tweaks';
 import { attachToDesktop, findDesktopListView, hwndFromBuffer, isForegroundFullscreen } from '../win32/workerw';
 import type { ApplyOptions, PlatformAdapter } from './types';
 
@@ -17,6 +18,8 @@ interface Backup {
   animation: boolean;
   clientAreaAnimation: boolean;
   autoHide: boolean;
+  classicMenu?: boolean;
+  mouseAcceleration?: boolean;
 }
 
 const TOUCHED: Array<[string, string]> = [
@@ -38,6 +41,18 @@ const TOUCHED: Array<[string, string]> = [
   [KEYS.stuckRects3, 'Settings'],
   [KEYS.desktopBag, 'IconSize'],
   [KEYS.controlDesktop, 'AutoColorization'],
+  [KEYS.advanced, 'HideFileExt'],
+  [KEYS.advanced, 'Hidden'],
+  [KEYS.advanced, 'ShowSecondsInSystemClock'],
+  [KEYS.advanced, 'ShowTaskViewButton'],
+  [KEYS.advanced, 'TaskbarDa'],
+  [KEYS.search, 'SearchboxTaskbarMode'],
+  [KEYS.taskbarDev, 'TaskbarEndTask'],
+  [KEYS.explorerPolicy, 'DisableSearchBoxSuggestions'],
+  [KEYS.gameBar, 'AutoGameModeEnabled'],
+  [KEYS.mouse, 'MouseSpeed'],
+  [KEYS.mouse, 'MouseThreshold1'],
+  [KEYS.mouse, 'MouseThreshold2'],
 ];
 
 const DWMWA_WINDOW_CORNER_PREFERENCE = 33;
@@ -91,26 +106,117 @@ export class WindowsPlatform implements PlatformAdapter {
   }
 
   private async ensureBackup(): Promise<void> {
-    try {
-      await fs.access(this.backupPath);
-      return;
-    } catch {
-    }
     const api = win32();
-    const backup: Backup = {
-      createdAt: new Date().toISOString(),
-      registry: {},
-      animation: api?.getAnimation() ?? true,
-      clientAreaAnimation: api?.getClientAreaAnimation() ?? true,
-      autoHide: api?.getAutoHide() ?? false,
-    };
+    let backup: Backup;
+    let changed = false;
+    try {
+      backup = JSON.parse(await fs.readFile(this.backupPath, 'utf8'));
+    } catch {
+      backup = {
+        createdAt: new Date().toISOString(),
+        registry: {},
+        animation: api?.getAnimation() ?? true,
+        clientAreaAnimation: api?.getClientAreaAnimation() ?? true,
+        autoHide: api?.getAutoHide() ?? false,
+      };
+      changed = true;
+    }
     for (const [key, name] of TOUCHED) {
+      const id = `${key}|${name}`;
+      if (id in backup.registry) continue;
       const value = await regGet(key, name);
-      backup.registry[`${key}|${name}`] = value
+      backup.registry[id] = value
         ? { type: value.type, data: value.type === 'REG_BINARY' ? value.data.toString('hex') : (value.data as number | string) }
         : null;
+      changed = true;
     }
-    await fs.writeFile(this.backupPath, JSON.stringify(backup, null, 2), 'utf8');
+    if (backup.classicMenu === undefined) {
+      backup.classicMenu = await regKeyExists(`${KEYS.classicMenu}\\InprocServer32`);
+      changed = true;
+    }
+    if (backup.mouseAcceleration === undefined && api) {
+      backup.mouseAcceleration = api.getMouseAcceleration();
+      changed = true;
+    }
+    if (changed) await fs.writeFile(this.backupPath, JSON.stringify(backup, null, 2), 'utf8');
+  }
+
+  async tweaks(): Promise<TweakState[]> {
+    const api = win32();
+    const num = async (key: string, name: string, fallback: number) => {
+      const v = await regGet(key, name);
+      return v && v.type === 'REG_DWORD' ? v.data : fallback;
+    };
+    const values: Record<TweakId, TweakValue> = {
+      fileExtensions: (await num(KEYS.advanced, 'HideFileExt', 1)) === 0,
+      hiddenFiles: (await num(KEYS.advanced, 'Hidden', 2)) === 1,
+      classicContextMenu: await regKeyExists(`${KEYS.classicMenu}\\InprocServer32`),
+      clockSeconds: (await num(KEYS.advanced, 'ShowSecondsInSystemClock', 0)) === 1,
+      searchBox: ['hidden', 'icon', 'box', 'box'][Math.min(3, await num(KEYS.search, 'SearchboxTaskbarMode', 1))],
+      taskViewButton: (await num(KEYS.advanced, 'ShowTaskViewButton', 1)) === 1,
+      widgetsButton: (await num(KEYS.advanced, 'TaskbarDa', 1)) === 1,
+      endTask: (await num(KEYS.taskbarDev, 'TaskbarEndTask', 0)) === 1,
+      webSearch: (await num(KEYS.explorerPolicy, 'DisableSearchBoxSuggestions', 0)) === 0,
+      mouseAcceleration: api?.getMouseAcceleration() ?? true,
+      gameMode: (await num(KEYS.gameBar, 'AutoGameModeEnabled', 1)) === 1,
+    };
+    return TWEAKS.map((t) => ({ id: t.id, value: values[t.id], supported: !t.windows11Only || this.isWin11 }));
+  }
+
+  async setTweak(id: TweakId, value: TweakValue): Promise<SetTweakResult> {
+    const def = TWEAKS.find((t) => t.id === id);
+    if (!def) return { ok: false, error: 'unknown', restartExplorer: false };
+    if (def.windows11Only && !this.isWin11) return { ok: false, error: 'apply.needsWin11', restartExplorer: false };
+    await this.ensureBackup();
+    const api = win32();
+    const on = value === true;
+    try {
+      switch (id) {
+        case 'fileExtensions':
+          await regSet(KEYS.advanced, 'HideFileExt', dword(on ? 0 : 1));
+          break;
+        case 'hiddenFiles':
+          await regSet(KEYS.advanced, 'Hidden', dword(on ? 1 : 2));
+          break;
+        case 'classicContextMenu':
+          if (on) await regSetDefault(`${KEYS.classicMenu}\\InprocServer32`, '');
+          else await regDeleteKey(KEYS.classicMenu);
+          break;
+        case 'clockSeconds':
+          await regSet(KEYS.advanced, 'ShowSecondsInSystemClock', dword(on ? 1 : 0));
+          break;
+        case 'searchBox':
+          await regSet(KEYS.search, 'SearchboxTaskbarMode', dword(({ hidden: 0, icon: 1, box: 2 } as Record<string, number>)[String(value)] ?? 1));
+          break;
+        case 'taskViewButton':
+          await regSet(KEYS.advanced, 'ShowTaskViewButton', dword(on ? 1 : 0));
+          break;
+        case 'widgetsButton':
+          await regSet(KEYS.advanced, 'TaskbarDa', dword(on ? 1 : 0));
+          break;
+        case 'endTask':
+          await regSet(KEYS.taskbarDev, 'TaskbarEndTask', dword(on ? 1 : 0));
+          break;
+        case 'webSearch':
+          await regSet(KEYS.explorerPolicy, 'DisableSearchBoxSuggestions', dword(on ? 0 : 1));
+          break;
+        case 'mouseAcceleration':
+          await regSet(KEYS.mouse, 'MouseSpeed', sz(on ? '1' : '0'));
+          await regSet(KEYS.mouse, 'MouseThreshold1', sz(on ? '6' : '0'));
+          await regSet(KEYS.mouse, 'MouseThreshold2', sz(on ? '10' : '0'));
+          api?.setMouseAcceleration(on);
+          break;
+        case 'gameMode':
+          await regSet(KEYS.gameBar, 'AutoGameModeEnabled', dword(on ? 1 : 0));
+          break;
+      }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err), restartExplorer: false };
+    }
+    api?.broadcastSettingChange('TraySettings');
+    api?.broadcastSettingChange('Policy');
+    api?.refreshShell();
+    return { ok: true, restartExplorer: def.restartExplorer };
   }
 
   async applySystemTheme(theme: Theme, options: ApplyOptions): Promise<ApplyResult> {
@@ -267,6 +373,12 @@ export class WindowsPlatform implements PlatformAdapter {
       api.broadcastSettingChange('ImmersiveColorSet');
       api.broadcastSettingChange('TraySettings');
     }
+    if (api && backup.mouseAcceleration !== undefined) api.setMouseAcceleration(backup.mouseAcceleration);
+    if (backup.classicMenu === false && (await regKeyExists(`${KEYS.classicMenu}\\InprocServer32`))) {
+      await regDeleteKey(KEYS.classicMenu);
+      needsRestart = true;
+    }
+    api?.refreshShell();
     if (needsRestart) await this.restartExplorer();
     await fs.rm(this.backupPath, { force: true });
     steps.push({ what: 'apply.restore', status: 'applied' });
@@ -341,7 +453,7 @@ export class WindowsPlatform implements PlatformAdapter {
     this.shellRestartListeners.push(cb);
   }
 
-  private async restartExplorer(): Promise<void> {
+  async restartExplorer(): Promise<void> {
     await new Promise<void>((resolve) => execFile('taskkill.exe', ['/f', '/im', 'explorer.exe'], { windowsHide: true }, () => resolve()));
     await new Promise((r) => setTimeout(r, 800));
     spawn('explorer.exe', [], { detached: true, stdio: 'ignore' }).unref();

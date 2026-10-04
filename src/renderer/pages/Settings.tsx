@@ -1,7 +1,8 @@
 import { api, isDesktopApp } from '../app/api';
 import { useT } from '../app/i18n';
 import { useStudio } from '../app/store';
-import { Button, Field, Segmented, Tip, Toggle } from '../components/ui';
+import { Button, Field, Segmented, Slider, Tip, Toggle } from '../components/ui';
+import { Icon } from '../components/Icon';
 import { summarizeApply } from './Library';
 
 export function SettingsPage() {
@@ -52,10 +53,44 @@ export function SettingsPage() {
         </Field>
       </div>
       <div className="card pad stack">
-        <h2>🛟 {t('settings.safety')}</h2>
+        <h2 className="with-icon">
+          <Icon name="sliders" size={18} /> {t('settings.wallpaperTitle')}
+        </h2>
+        <Field label={t('tray.volume')} hint={t('settings.volumeHint')}>
+          <div className="row nowrap">
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={settings.wallpaperMuted ? 'volume-off' : 'volume'}
+              title={t('tray.mute')}
+              onClick={() => void updateSettings({ wallpaperMuted: !settings.wallpaperMuted })}
+            />
+            <Slider
+              value={settings.wallpaperVolume}
+              min={0}
+              max={1}
+              step={0.01}
+              disabled={settings.wallpaperMuted}
+              format={(v) => `${Math.round(v * 100)}%`}
+              onChange={(v) => void updateSettings({ wallpaperVolume: v })}
+            />
+          </div>
+        </Field>
+        <Field label={t('tray.saturation')} hint={t('settings.saturationHint')}>
+          <Slider value={settings.wallpaperSaturation} min={0} max={2} step={0.05} format={(v) => `${Math.round(v * 100)}%`} onChange={(v) => void updateSettings({ wallpaperSaturation: v })} />
+        </Field>
+        <Field label={t('tray.speed')} hint={t('settings.speedHint')}>
+          <Slider value={settings.wallpaperSpeed} min={0.25} max={2} step={0.05} format={(v) => `${v.toFixed(2)}×`} onChange={(v) => void updateSettings({ wallpaperSpeed: v })} />
+        </Field>
+        <Tip>{t('settings.trayTip')}</Tip>
+      </div>
+      <div className="card pad stack">
+        <h2 className="with-icon">
+          <Icon name="lifebuoy" size={18} /> {t('settings.safety')}
+        </h2>
         <p className="muted">{t('settings.safetyDesc')}</p>
         <div>
-          <Button variant="danger" icon="↺" onClick={() => void restore()}>
+          <Button variant="danger" icon="restore" onClick={() => void restore()}>
             {t('settings.restore')}
           </Button>
         </div>

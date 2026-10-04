@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { Estimate } from '../../shared/perf/estimator';
 import type {
+  AudioLayer,
   BlendMode,
   ClockLayer,
   Fit,
@@ -22,17 +23,26 @@ import { extractAccent } from '../app/media';
 import { useEditingTheme, useStudio, type InspectorSection } from '../app/store';
 import { RatingBadge } from '../components/PerfMeter';
 import { Button, ColorField, Field, Segmented, Slider, Tip, Toggle } from '../components/ui';
-import { LAYER_ICONS } from './LayerList';
+import { LayerIcon } from './LayerList';
+import { Icon, type IconName } from '../components/Icon';
 
-const SECTIONS: Array<{ id: InspectorSection; icon: string }> = [
-  { id: 'layer', icon: '🧱' },
-  { id: 'colors', icon: '🎨' },
-  { id: 'windows', icon: '🪟' },
-  { id: 'taskbar', icon: '📏' },
-  { id: 'desktop', icon: '🗂️' },
-  { id: 'performance', icon: '⚡' },
-  { id: 'info', icon: 'ℹ️' },
+const SECTIONS: Array<{ id: InspectorSection; icon: IconName }> = [
+  { id: 'layer', icon: 'layers' },
+  { id: 'colors', icon: 'palette' },
+  { id: 'windows', icon: 'app-window' },
+  { id: 'taskbar', icon: 'panel-bottom' },
+  { id: 'desktop', icon: 'layout-grid' },
+  { id: 'performance', icon: 'gauge' },
+  { id: 'info', icon: 'info' },
 ];
+
+function SectionTitle({ icon, children }: { icon: IconName; children: ReactNode }) {
+  return (
+    <h3 className="with-icon">
+      <Icon name={icon} size={17} /> {children}
+    </h3>
+  );
+}
 
 export function Inspector({ estimate }: { estimate: Estimate }) {
   const t = useT();
@@ -52,7 +62,7 @@ export function Inspector({ estimate }: { estimate: Estimate }) {
             onClick={() => showSection(s.id)}
             title={t(`section.${s.id}`)}
           >
-            <span>{s.icon}</span>
+            <Icon name={s.icon} size={17} />
             <span className="tab-label">{t(`section.${s.id}`)}</span>
           </button>
         ))}
@@ -79,7 +89,7 @@ function Advanced({ children }: { children: ReactNode }) {
   return (
     <div className="advanced">
       <button type="button" className="advanced-toggle" onClick={() => setOpen(!open)}>
-        {open ? '▾' : '▸'} {t('editor.moreOptions')}
+        <Icon name={open ? 'chevron-down' : 'chevron-right'} size={14} /> {t('editor.moreOptions')}
       </button>
       {open && children}
     </div>
@@ -96,7 +106,7 @@ function LayerInspector({ layer, theme }: { layer: Layer; theme: Theme }) {
   return (
     <div className="stack">
       <div className="inspector-heading">
-        <span className="layer-icon big">{LAYER_ICONS[layer.type]}</span>
+        <LayerIcon type={layer.type} size={24} />
         <input className="name-input" value={layer.name} maxLength={60} onChange={(e) => set({ name: e.target.value || ' ' }, 'name')} />
       </div>
       <p className="muted small">{t(`layer.help.${layer.type}`)}</p>
@@ -109,25 +119,30 @@ function LayerInspector({ layer, theme }: { layer: Layer; theme: Theme }) {
       {layer.type === 'gradient' && <GradientProps layer={layer} set={set} />}
       {layer.type === 'image' && <ImageProps layer={layer} theme={theme} set={set} />}
       {layer.type === 'video' && <VideoProps layer={layer} theme={theme} set={set} />}
+      {layer.type === 'audio' && <AudioProps layer={layer} theme={theme} set={set} />}
       {layer.type === 'particles' && <ParticleProps layer={layer} set={set} />}
       {layer.type === 'shader' && <ShaderProps layer={layer} set={set} />}
       {layer.type === 'clock' && <ClockProps layer={layer} set={set} />}
       {layer.type === 'text' && <TextProps layer={layer} set={set} />}
 
-      <Field label={t('prop.opacity')} hint={t('prop.opacityHint')}>
-        <Slider value={layer.opacity} min={0} max={1} step={0.01} format={pct} onChange={(v) => set({ opacity: v }, 'opacity')} />
-      </Field>
-      <Advanced>
-        <Field label={t('prop.blend')} hint={t('prop.blendHint')}>
-          <select value={layer.blendMode} onChange={(e) => set({ blendMode: e.target.value as BlendMode })}>
-            {(['normal', 'screen', 'multiply', 'overlay', 'lighten', 'darken', 'soft-light'] as BlendMode[]).map((m) => (
-              <option key={m} value={m}>
-                {t(`blend.${m}`)}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </Advanced>
+      {layer.type !== 'audio' && (
+        <>
+          <Field label={t('prop.opacity')} hint={t('prop.opacityHint')}>
+            <Slider value={layer.opacity} min={0} max={1} step={0.01} format={pct} onChange={(v) => set({ opacity: v }, 'opacity')} />
+          </Field>
+          <Advanced>
+            <Field label={t('prop.blend')} hint={t('prop.blendHint')}>
+              <select value={layer.blendMode} onChange={(e) => set({ blendMode: e.target.value as BlendMode })}>
+                {(['normal', 'screen', 'multiply', 'overlay', 'lighten', 'darken', 'soft-light'] as BlendMode[]).map((m) => (
+                  <option key={m} value={m}>
+                    {t(`blend.${m}`)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </Advanced>
+        </>
+      )}
     </div>
   );
 }
@@ -146,14 +161,14 @@ function GradientProps({ layer, set }: { layer: GradientLayer; set: Setter<Gradi
               <code className="small">{c}</code>
               {layer.colors.length > 2 && (
                 <button type="button" className="icon-btn" onClick={() => set({ colors: layer.colors.filter((_, j) => j !== i) })} title={t('common.remove')}>
-                  ✕
+                  <Icon name="x" size={14} />
                 </button>
               )}
             </div>
           ))}
           {layer.colors.length < 6 && (
-            <Button size="sm" onClick={() => set({ colors: [...layer.colors, layer.colors[layer.colors.length - 1]] })}>
-              ＋ {t('prop.addColor')}
+            <Button size="sm" icon="plus" onClick={() => set({ colors: [...layer.colors, layer.colors[layer.colors.length - 1]] })}>
+              {t('prop.addColor')}
             </Button>
           )}
         </div>
@@ -189,9 +204,15 @@ function FitField<L extends ImageLayer | VideoLayer>({ layer, set }: { layer: L;
 function AssetInfo({ theme, assetKey }: { theme: Theme; assetKey: string }) {
   const t = useT();
   const a = theme.assets[assetKey];
-  if (!a) return <div className="field-note">⚠ {t('prop.assetMissing')}</div>;
+  if (!a)
+    return (
+      <div className="field-note">
+        <Icon name="warning" size={12} /> {t('prop.assetMissing')}
+      </div>
+    );
   const parts = [a.width && a.height ? `${a.width}×${a.height}` : null, a.fps ? `${a.fps} FPS` : null, a.durationSec ? t('unit.seconds', { n: Math.round(a.durationSec) }) : null, `${(a.bytes / 1024 / 1024).toFixed(1)} MB`];
-  return <div className="asset-info small muted">📄 {a.file.split('/').pop()} · {parts.filter(Boolean).join(' · ')}</div>;
+  return <div className="asset-info small muted">
+      <Icon name="file" size={12} /> {a.file.split('/').pop()} · {parts.filter(Boolean).join(' · ')}</div>;
 }
 
 function ImageProps({ layer, theme, set }: { layer: ImageLayer; theme: Theme; set: Setter<ImageLayer> }) {
@@ -222,6 +243,30 @@ function VideoProps({ layer, theme, set }: { layer: VideoLayer; theme: Theme; se
       <Field label={t('prop.playbackRate')}>
         <Slider value={layer.playbackRate} min={0.25} max={2} step={0.05} format={(v) => `${v.toFixed(2)}×`} marks={[t('mark.slow'), t('mark.fast')]} onChange={(v) => set({ playbackRate: v }, 'rate')} />
       </Field>
+      <Field label={t('prop.videoSound')} hint={t('prop.videoSoundHint')}>
+        <Toggle checked={layer.sound} onChange={(v) => set({ sound: v })} />
+      </Field>
+      {layer.sound && (
+        <Field label={t('prop.volume')}>
+          <Slider value={layer.volume} min={0} max={1} step={0.01} format={pct} onChange={(v) => set({ volume: v }, 'volume')} />
+        </Field>
+      )}
+    </>
+  );
+}
+
+function AudioProps({ layer, theme, set }: { layer: AudioLayer; theme: Theme; set: Setter<AudioLayer> }) {
+  const t = useT();
+  return (
+    <>
+      <AssetInfo theme={theme} assetKey={layer.asset} />
+      <Field label={t('prop.volume')} hint={t('prop.volumeHint')}>
+        <Slider value={layer.volume} min={0} max={1} step={0.01} format={pct} onChange={(v) => set({ volume: v }, 'volume')} />
+      </Field>
+      <Field label={t('prop.fadeIn')} hint={t('prop.fadeInHint')}>
+        <Slider value={layer.fadeInSeconds} min={0} max={10} step={0.5} format={(v) => (v === 0 ? t('common.off') : t('unit.seconds', { n: v }))} onChange={(v) => set({ fadeInSeconds: v }, 'fade')} />
+      </Field>
+      <Tip>{t('prop.audioTip')}</Tip>
     </>
   );
 }
@@ -297,7 +342,7 @@ function PositionField({ value, onChange }: { value: WidgetPosition; onChange: (
       {cells.map((cell, i) =>
         cell ? (
           <button type="button" key={cell} role="radio" aria-checked={value === cell} className={value === cell ? 'active' : ''} title={t(`position.${cell}`)} onClick={() => onChange(cell)}>
-            ●
+            <Icon name="circle" size={8} strokeWidth={4} />
           </button>
         ) : (
           <span key={i} />
@@ -390,10 +435,10 @@ function ColorsSection({ theme }: { theme: Theme }) {
   };
   return (
     <div className="stack">
-      <h3>🎨 {t('section.colors')}</h3>
+      <SectionTitle icon="palette">{t('section.colors')}</SectionTitle>
       <Field label={t('colors.accent')} hint={t('colors.accentHint')} disabled={caps?.accentColor === false} disabledReason={unsupported(t, caps?.accentColor)}>
         <ColorField value={c.accent} onChange={(v) => v && edit((d) => (d.colors.accent = v), 'accent')} />
-        <Button size="sm" icon="🪄" onClick={() => void pickFromWallpaper()} disabled={picking}>
+        <Button size="sm" icon="wand" onClick={() => void pickFromWallpaper()} disabled={picking}>
           {t('colors.fromWallpaper')}
         </Button>
       </Field>
@@ -402,8 +447,8 @@ function ColorsSection({ theme }: { theme: Theme }) {
           value={c.mode}
           onChange={(v) => edit((d) => (d.colors.mode = v))}
           options={[
-            { value: 'dark', label: t('colors.dark'), icon: '🌙' },
-            { value: 'light', label: t('colors.light'), icon: '☀️' },
+            { value: 'dark', label: t('colors.dark'), icon: 'moon' },
+            { value: 'light', label: t('colors.light'), icon: 'sun' },
           ]}
         />
       </Field>
@@ -431,7 +476,7 @@ function WindowsSection({ theme }: { theme: Theme }) {
   const needs11 = caps?.os === 'windows' ? 'caps.needsWin11' : 'caps.windowsOnly';
   return (
     <div className="stack">
-      <h3>🪟 {t('section.windows')}</h3>
+      <SectionTitle icon="app-window">{t('section.windows')}</SectionTitle>
       <Field label={t('windows.animations')} hint={t('windows.animationsHint')} disabled={caps?.windowAnimations === false} disabledReason={unsupported(t, caps?.windowAnimations)}>
         <Toggle checked={w.animations} onChange={(v) => edit((d) => (d.windows.animations = v))} />
       </Field>
@@ -441,9 +486,9 @@ function WindowsSection({ theme }: { theme: Theme }) {
           onChange={(v) => edit((d) => (d.windows.corners = v))}
           options={[
             { value: 'default', label: t('windows.corners.default') },
-            { value: 'round', label: t('windows.corners.round'), icon: '◯' },
-            { value: 'round-small', label: t('windows.corners.small'), icon: '▢' },
-            { value: 'square', label: t('windows.corners.square'), icon: '□' },
+            { value: 'round', label: t('windows.corners.round'), icon: 'circle' },
+            { value: 'round-small', label: t('windows.corners.small'), icon: 'square' },
+            { value: 'square', label: t('windows.corners.square'), icon: 'square' },
           ]}
         />
       </Field>
@@ -471,7 +516,7 @@ function TaskbarSection({ theme }: { theme: Theme }) {
   const positions = caps?.taskbarPositions ?? ['bottom', 'top', 'left', 'right'];
   return (
     <div className="stack">
-      <h3>📏 {t('section.taskbar')}</h3>
+      <SectionTitle icon="panel-bottom">{t('section.taskbar')}</SectionTitle>
       <Field label={t('taskbar.position')} hint={t('taskbar.positionHint')} disabled={positions.length === 0} disabledReason={unsupported(t, positions.length > 0)}>
         <Segmented
           value={tb.position}
@@ -484,8 +529,8 @@ function TaskbarSection({ theme }: { theme: Theme }) {
           value={tb.alignment}
           onChange={(v) => edit((d) => (d.taskbar.alignment = v))}
           options={[
-            { value: 'left', label: t('taskbar.alignLeft'), icon: '⇤' },
-            { value: 'center', label: t('taskbar.alignCenter'), icon: '⇔' },
+            { value: 'left', label: t('taskbar.alignLeft'), icon: 'align-left' },
+            { value: 'center', label: t('taskbar.alignCenter'), icon: 'align-center' },
           ]}
         />
       </Field>
@@ -513,7 +558,7 @@ function DesktopSection({ theme }: { theme: Theme }) {
   const edit = useStudio((s) => s.edit);
   return (
     <div className="stack">
-      <h3>🗂️ {t('section.desktop')}</h3>
+      <SectionTitle icon="layout-grid">{t('section.desktop')}</SectionTitle>
       <Field label={t('desktop.showIcons')} disabled={caps?.desktopIcons === false} disabledReason={unsupported(t, caps?.desktopIcons)}>
         <Toggle checked={theme.desktop.showIcons} onChange={(v) => edit((d) => (d.desktop.showIcons = v))} />
       </Field>
@@ -566,7 +611,7 @@ function PerformanceSection({ theme, estimate }: { theme: Theme; estimate: Estim
   const w = theme.wallpaper;
   return (
     <div className="stack">
-      <h3>⚡ {t('section.performance')}</h3>
+      <SectionTitle icon="gauge">{t('section.performance')}</SectionTitle>
       <div className="row">
         <RatingBadge rating={estimate.rating} />
         <span className="muted small">{t('perf.scoreLine', { score: estimate.score, watts: estimate.extraWatts })}</span>
@@ -602,7 +647,7 @@ function PerformanceSection({ theme, estimate }: { theme: Theme; estimate: Estim
           ))}
         </div>
       )}
-      <Button icon="📊" onClick={() => go('performance', theme.id)}>
+      <Button icon="chart" onClick={() => go('performance', theme.id)}>
         {t('perf.openFullReport')}
       </Button>
     </div>
@@ -614,7 +659,7 @@ function InfoSection({ theme }: { theme: Theme }) {
   const edit = useStudio((s) => s.edit);
   return (
     <div className="stack">
-      <h3>ℹ️ {t('section.info')}</h3>
+      <SectionTitle icon="info">{t('section.info')}</SectionTitle>
       <Field label={t('info.name')}>
         <input value={theme.name} maxLength={80} onChange={(e) => edit((d) => (d.name = e.target.value || ' '), 'name')} />
       </Field>

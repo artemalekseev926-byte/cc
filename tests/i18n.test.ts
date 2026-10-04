@@ -3,6 +3,8 @@ import { collectKeys } from '../scripts/i18n-keys.mjs';
 import { CATEGORY_ORDER, TOOLS } from '../src/shared/editor/tools';
 import { DICTIONARIES, resolveLang, translate } from '../src/shared/i18n';
 import { PRESETS } from '../src/shared/theme/presets';
+import { APP_CATALOG } from '../src/shared/system/apps';
+import { TWEAKS, TWEAK_GROUPS } from '../src/shared/system/tweaks';
 import { THEME_TAGS } from '../src/shared/sharing/validate';
 
 function dynamicKeys(): string[] {
@@ -11,7 +13,7 @@ function dynamicKeys(): string[] {
   TOOLS.forEach((t) => keys.push(`tool.${t.id}.title`, `tool.${t.id}.desc`));
   add('category.', CATEGORY_ORDER);
   PRESETS.forEach((p) => keys.push(p.blurbKey));
-  const layerTypes = ['solid', 'gradient', 'image', 'video', 'particles', 'shader', 'clock', 'text'];
+  const layerTypes = ['solid', 'gradient', 'image', 'video', 'audio', 'particles', 'shader', 'clock', 'text'];
   add('layer.type.', layerTypes);
   add('layer.help.', layerTypes);
   add('preset.layer.', ['snow', 'rain', 'fireflies', 'stars', 'bubbles', 'sakura', 'aurora', 'waves', 'plasma', 'nebula', 'grid']);
@@ -25,13 +27,20 @@ function dynamicKeys(): string[] {
   add('rating.', ratings, '.desc');
   add('check.perf.', ratings);
   add('library.source.', ['builtin', 'local']);
-  add('nav.', ['library', 'editor', 'share', 'performance', 'settings']);
+  add('nav.', ['library', 'editor', 'share', 'system', 'performance', 'settings']);
   add('status.paused.', ['fullscreen', 'battery', 'manual']);
   add('tag.', THEME_TAGS);
   add('taskbar.', ['bottom', 'top', 'left', 'right']);
   add('import.package.', ['invalid', 'unsafe', 'tooBig']);
   add('perf.phase.', ['starting', 'warmup', 'measuring', 'done']);
-  add('import.kind.', ['image', 'video', 'theme', 'unsupported']);
+  add('import.kind.', ['image', 'video', 'audio', 'theme', 'unsupported']);
+  TWEAKS.forEach((tw) => {
+    keys.push(`tweak.${tw.id}`, `tweak.${tw.id}.desc`);
+    (tw.options ?? []).forEach((o) => keys.push(`tweak.${tw.id}.${o}`));
+  });
+  add('tweakGroup.', TWEAK_GROUPS);
+  APP_CATALOG.forEach((a) => keys.push(`app.${a.id}`));
+  add('apps.category.', ['look', 'taskbar', 'tools']);
   keys.push('caps.windowsOnly', 'caps.needsWin11', 'common.error');
   return keys;
 }

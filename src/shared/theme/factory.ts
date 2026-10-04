@@ -1,5 +1,6 @@
 import {
   THEME_SCHEMA_VERSION,
+  type AudioLayer,
   type ClockLayer,
   type GradientLayer,
   type ImageLayer,
@@ -69,7 +70,11 @@ export function createImageLayer(asset: string, name = 'Картинка'): Imag
 }
 
 export function createVideoLayer(asset: string, name = 'Видео'): VideoLayer {
-  return { ...base(name), type: 'video', asset, fit: 'cover', playbackRate: 1 };
+  return { ...base(name), type: 'video', asset, fit: 'cover', playbackRate: 1, sound: false, volume: 0.6 };
+}
+
+export function createAudioLayer(asset: string, name = 'Звук'): AudioLayer {
+  return { ...base(name), type: 'audio', asset, volume: 0.6, fadeInSeconds: 2 };
 }
 
 const particleDefaults: Record<ParticlePreset, Pick<ParticlesLayer, 'count' | 'speed' | 'size' | 'color' | 'name'>> = {
@@ -134,6 +139,8 @@ export function createLayer(type: LayerType, asset?: string): Layer {
       return createClockLayer();
     case 'text':
       return createTextLayer();
+    case 'audio':
+      return createAudioLayer(asset ?? '');
   }
 }
 

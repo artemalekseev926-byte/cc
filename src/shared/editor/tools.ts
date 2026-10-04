@@ -4,7 +4,7 @@ export type ToolCategory = 'background' | 'effects' | 'widgets' | 'colors' | 'wi
 
 export type ToolAction =
   | { kind: 'addLayer'; layer: LayerType; preset?: ParticlePreset | ShaderPreset }
-  | { kind: 'importMedia'; accept: 'image' | 'video' | 'any' }
+  | { kind: 'importMedia'; accept: 'image' | 'video' | 'audio' | 'any' }
   | { kind: 'openSection'; section: 'colors' | 'windows' | 'taskbar' | 'desktop' | 'performance' };
 
 export interface Tool {
@@ -19,21 +19,21 @@ export interface Tool {
 export const CATEGORY_ORDER: ToolCategory[] = ['background', 'effects', 'widgets', 'colors', 'windows', 'taskbar', 'desktop', 'performance'];
 
 export const CATEGORY_ICONS: Record<ToolCategory, string> = {
-  background: '🖼️',
-  effects: '✨',
-  widgets: '⏰',
-  colors: '🎨',
-  windows: '🪟',
-  taskbar: '📏',
-  desktop: '🗂️',
-  performance: '⚡',
+  background: 'image',
+  effects: 'sparkles',
+  widgets: 'clock',
+  colors: 'palette',
+  windows: 'app-window',
+  taskbar: 'panel-bottom',
+  desktop: 'layout-grid',
+  performance: 'gauge',
 };
 
 export const TOOLS: Tool[] = [
   {
     id: 'import-image',
     category: 'background',
-    icon: '🖼️',
+    icon: 'image-plus',
     popular: true,
     action: { kind: 'importMedia', accept: 'image' },
     keywords: ['картинка', 'фото', 'изображение', 'обои', 'фон', 'арт', 'рисунок', 'png', 'jpg', 'image', 'picture', 'photo', 'wallpaper', 'background', 'art'],
@@ -41,15 +41,23 @@ export const TOOLS: Tool[] = [
   {
     id: 'import-video',
     category: 'background',
-    icon: '🎬',
+    icon: 'clapperboard',
     popular: true,
     action: { kind: 'importMedia', accept: 'video' },
     keywords: ['видео', 'живые обои', 'анимированные', 'анимация', 'ролик', 'mp4', 'webm', 'gif', 'video', 'animated', 'live wallpaper', 'movie'],
   },
   {
+    id: 'import-audio',
+    category: 'background',
+    icon: 'music',
+    popular: true,
+    action: { kind: 'importMedia', accept: 'audio' },
+    keywords: ['звук', 'музыка', 'мелодия', 'песня', 'шум', 'дождь звук', 'аудио', 'mp3', 'ogg', 'wav', 'sound', 'music', 'audio', 'ambient', 'song'],
+  },
+  {
     id: 'gradient',
     category: 'background',
-    icon: '🌈',
+    icon: 'rainbow',
     popular: true,
     action: { kind: 'addLayer', layer: 'gradient' },
     keywords: ['градиент', 'переход цветов', 'перелив', 'цветной фон', 'gradient', 'colors', 'blend'],
@@ -57,14 +65,14 @@ export const TOOLS: Tool[] = [
   {
     id: 'solid',
     category: 'background',
-    icon: '⬛',
+    icon: 'square',
     action: { kind: 'addLayer', layer: 'solid' },
     keywords: ['цвет', 'однотонный', 'заливка', 'простой фон', 'solid', 'color', 'fill', 'plain'],
   },
   {
     id: 'snow',
     category: 'effects',
-    icon: '❄️',
+    icon: 'snowflake',
     popular: true,
     action: { kind: 'addLayer', layer: 'particles', preset: 'snow' },
     keywords: ['снег', 'снежинки', 'зима', 'новый год', 'snow', 'winter', 'snowflakes', 'christmas'],
@@ -72,42 +80,42 @@ export const TOOLS: Tool[] = [
   {
     id: 'rain',
     category: 'effects',
-    icon: '🌧️',
+    icon: 'cloud-rain',
     action: { kind: 'addLayer', layer: 'particles', preset: 'rain' },
     keywords: ['дождь', 'капли', 'ливень', 'осень', 'rain', 'drops', 'storm'],
   },
   {
     id: 'fireflies',
     category: 'effects',
-    icon: '🪲',
+    icon: 'bug',
     action: { kind: 'addLayer', layer: 'particles', preset: 'fireflies' },
     keywords: ['светлячки', 'огоньки', 'искры', 'боке', 'fireflies', 'sparks', 'glow', 'bokeh'],
   },
   {
     id: 'stars',
     category: 'effects',
-    icon: '⭐',
+    icon: 'star',
     action: { kind: 'addLayer', layer: 'particles', preset: 'stars' },
     keywords: ['звёзды', 'звезды', 'космос', 'ночь', 'небо', 'stars', 'space', 'night', 'sky'],
   },
   {
     id: 'sakura',
     category: 'effects',
-    icon: '🌸',
+    icon: 'flower',
     action: { kind: 'addLayer', layer: 'particles', preset: 'sakura' },
     keywords: ['сакура', 'лепестки', 'цветы', 'весна', 'аниме', 'sakura', 'petals', 'flowers', 'spring', 'anime'],
   },
   {
     id: 'bubbles',
     category: 'effects',
-    icon: '🫧',
+    icon: 'droplets',
     action: { kind: 'addLayer', layer: 'particles', preset: 'bubbles' },
     keywords: ['пузыри', 'пузырьки', 'вода', 'море', 'bubbles', 'water', 'underwater'],
   },
   {
     id: 'aurora',
     category: 'effects',
-    icon: '🌌',
+    icon: 'wand',
     popular: true,
     action: { kind: 'addLayer', layer: 'shader', preset: 'aurora' },
     keywords: ['северное сияние', 'аврора', 'сияние', 'aurora', 'northern lights'],
@@ -115,35 +123,35 @@ export const TOOLS: Tool[] = [
   {
     id: 'waves',
     category: 'effects',
-    icon: '🌊',
+    icon: 'waves',
     action: { kind: 'addLayer', layer: 'shader', preset: 'waves' },
     keywords: ['волны', 'вода', 'океан', 'море', 'waves', 'ocean', 'sea', 'water'],
   },
   {
     id: 'plasma',
     category: 'effects',
-    icon: '🔮',
+    icon: 'gem',
     action: { kind: 'addLayer', layer: 'shader', preset: 'plasma' },
     keywords: ['плазма', 'абстракция', 'психоделика', 'переливы', 'plasma', 'abstract', 'psychedelic'],
   },
   {
     id: 'nebula',
     category: 'effects',
-    icon: '🪐',
+    icon: 'orbit',
     action: { kind: 'addLayer', layer: 'shader', preset: 'nebula' },
     keywords: ['туманность', 'космос', 'галактика', 'дым', 'nebula', 'galaxy', 'space', 'smoke'],
   },
   {
     id: 'grid',
     category: 'effects',
-    icon: '🕹️',
+    icon: 'grid',
     action: { kind: 'addLayer', layer: 'shader', preset: 'grid' },
     keywords: ['неон', 'сетка', 'ретро', 'синтвейв', 'киберпанк', 'neon', 'grid', 'retro', 'synthwave', 'cyberpunk', 'outrun'],
   },
   {
     id: 'clock',
     category: 'widgets',
-    icon: '⏰',
+    icon: 'clock',
     popular: true,
     action: { kind: 'addLayer', layer: 'clock' },
     keywords: ['часы', 'время', 'дата', 'календарь', 'clock', 'time', 'date'],
@@ -151,14 +159,14 @@ export const TOOLS: Tool[] = [
   {
     id: 'text',
     category: 'widgets',
-    icon: '🔤',
+    icon: 'type',
     action: { kind: 'addLayer', layer: 'text' },
     keywords: ['текст', 'надпись', 'цитата', 'подпись', 'слова', 'text', 'quote', 'label', 'caption'],
   },
   {
     id: 'accent',
     category: 'colors',
-    icon: '🎨',
+    icon: 'palette',
     popular: true,
     action: { kind: 'openSection', section: 'colors' },
     keywords: ['цвет', 'акцент', 'цвета windows', 'тема', 'тёмная тема', 'темная', 'светлая', 'прозрачность', 'accent', 'colors', 'dark mode', 'light mode', 'transparency'],
@@ -166,7 +174,7 @@ export const TOOLS: Tool[] = [
   {
     id: 'window-style',
     category: 'windows',
-    icon: '🪟',
+    icon: 'app-window',
     popular: true,
     action: { kind: 'openSection', section: 'windows' },
     keywords: ['окна', 'рамка', 'углы', 'скругление', 'заголовок', 'анимация окон', 'border', 'corners', 'title bar', 'window animation', 'windows'],
@@ -174,7 +182,7 @@ export const TOOLS: Tool[] = [
   {
     id: 'taskbar',
     category: 'taskbar',
-    icon: '📏',
+    icon: 'panel-bottom',
     popular: true,
     action: { kind: 'openSection', section: 'taskbar' },
     keywords: ['панель задач', 'панель', 'таскбар', 'пуск', 'сверху', 'слева', 'по центру', 'скрывать', 'taskbar', 'panel', 'start', 'dock', 'position', 'autohide'],
@@ -182,14 +190,14 @@ export const TOOLS: Tool[] = [
   {
     id: 'desktop-icons',
     category: 'desktop',
-    icon: '🗂️',
+    icon: 'layout-grid',
     action: { kind: 'openSection', section: 'desktop' },
     keywords: ['значки', 'иконки', 'ярлыки', 'рабочий стол', 'скрыть значки', 'icons', 'shortcuts', 'desktop'],
   },
   {
     id: 'performance',
     category: 'performance',
-    icon: '⚡',
+    icon: 'gauge',
     action: { kind: 'openSection', section: 'performance' },
     keywords: ['производительность', 'нагрузка', 'тормозит', 'лагает', 'fps', 'кадры', 'батарея', 'ресурсы', 'игры', 'performance', 'lag', 'battery', 'resources', 'gaming'],
   },

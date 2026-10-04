@@ -7,6 +7,7 @@ import { api, isDesktopApp } from '../app/api';
 import { useT } from '../app/i18n';
 import { usePrimaryDisplay, useStudio } from '../app/store';
 import { DesktopPreview } from '../components/DesktopPreview';
+import { Icon, type IconName } from '../components/Icon';
 import { Button, Empty, Field, Tip } from '../components/ui';
 
 export function Share() {
@@ -33,15 +34,19 @@ export function Share() {
       <ImportDropZone onImported={(id) => setSelectedId(id)} />
 
       <section className="section">
-        <h2>📦 {t('share.exportTitle')}</h2>
+        <h2 className="with-icon">
+          <Icon name="package" size={18} /> {t('share.exportTitle')}
+        </h2>
         {localThemes.length === 0 ? (
-          <Empty icon="🎨" title={t('share.noLocal')} />
+          <Empty icon="palette" title={t('share.noLocal')} />
         ) : (
           <div className="publish-layout">
             <div className="publish-list">
               {localThemes.map((s) => (
                 <button type="button" key={s.id} className={`publish-item ${s.id === selected?.id ? 'active' : ''}`} onClick={() => setSelectedId(s.id)}>
-                  {s.previewUrl ? <img src={s.previewUrl} alt="" /> : <span className="publish-thumb-empty">🖼️</span>}
+                  {s.previewUrl ? <img src={s.previewUrl} alt="" /> : <span className="publish-thumb-empty">
+                      <Icon name="image" size={18} />
+                    </span>}
                   <span>
                     <strong>{s.name}</strong>
                     <span className="muted small">{s.author || ' '}</span>
@@ -87,7 +92,9 @@ function ImportDropZone({ onImported }: { onImported: (themeId: string) => void 
 
   return (
     <section className="section">
-      <h2>📥 {t('import.title')}</h2>
+      <h2 className="with-icon">
+        <Icon name="download" size={18} /> {t('import.title')}
+      </h2>
       <div
         className={`dropzone ${over ? 'over' : ''}`}
         onDragOver={(e) => {
@@ -102,7 +109,7 @@ function ImportDropZone({ onImported }: { onImported: (themeId: string) => void 
           void run([...e.dataTransfer.files].map((f) => api.themes.pathForFile(f)).filter(Boolean));
         }}
       >
-        <div className="dropzone-icon">⬇️</div>
+        <Icon name="upload" size={40} strokeWidth={1.4} className="dropzone-icon" />
         <strong>{t('import.drop')}</strong>
         <span className="muted">{t('import.formats')}</span>
         <div className="row">
@@ -116,7 +123,7 @@ function ImportDropZone({ onImported }: { onImported: (themeId: string) => void 
         <ul className="import-results">
           {files.map((f) => (
             <li key={f.path} className={f.problem ? 'bad' : f.warning ? 'warn' : 'ok'}>
-              <span>{f.problem ? '❌' : f.warning ? '⚠️' : '✅'}</span>
+              <Icon name={f.problem ? 'circle-x' : f.warning ? 'warning' : 'circle-check'} size={16} className={`level-${f.problem ? 'error' : f.warning ? 'warning' : 'ok'}`} />
               <span className="mono small">{f.name}</span>
               <span className="muted small">{f.problem ? t(f.problem) : f.warning ? t(f.warning) : t(`import.kind.${f.kind}`)}</span>
             </li>
@@ -134,7 +141,7 @@ export function errorKey(err: unknown): string {
   return match ? match[1] : 'import.package.invalid';
 }
 
-const CHECK_ICON: Record<Check['level'], string> = { ok: '✅', warning: '⚠️', error: '❌' };
+const CHECK_ICON: Record<Check['level'], IconName> = { ok: 'circle-check', warning: 'warning', error: 'circle-x' };
 
 function ExportForm({ theme, previewUrl }: { theme: Theme; previewUrl?: string }) {
   const t = useT();
@@ -189,13 +196,13 @@ function ExportForm({ theme, previewUrl }: { theme: Theme; previewUrl?: string }
       <div className="publish-preview">
         <DesktopPreview ref={previewRef} theme={theme} displayWidth={display.width} />
         <div className="row">
-          <Button size="sm" icon="📸" onClick={async () => {
+          <Button size="sm" icon="camera" onClick={async () => {
               await capture();
               toast('success', t('editor.previewSaved'));
             }} disabled={!isDesktopApp}>
             {t('share.capturePreview')}
           </Button>
-          <Button size="sm" icon="✏️" onClick={async () => openInEditor(await api.themes.load(theme.id))}>
+          <Button size="sm" icon="pencil" onClick={async () => openInEditor(await api.themes.load(theme.id))}>
             {t('library.edit')}
           </Button>
         </div>
@@ -221,19 +228,19 @@ function ExportForm({ theme, previewUrl }: { theme: Theme; previewUrl?: string }
           <strong>{t('share.checklist')}</strong>
           {checks.map((c) => (
             <div key={c.id} className={`check check-${c.level}`}>
-              <span>{CHECK_ICON[c.level]}</span>
+              <Icon name={CHECK_ICON[c.level]} size={15} className={`level-${c.level}`} />
               <span>{t(c.key, c.params)}</span>
             </div>
           ))}
         </div>
 
-        <Button variant="primary" size="lg" icon="💾" disabled={!canExport(checks) || busy || !isDesktopApp} onClick={() => void exportFile()}>
+        <Button variant="primary" size="lg" icon="save" disabled={!canExport(checks) || busy || !isDesktopApp} onClick={() => void exportFile()}>
           {busy ? t('common.working') : t('share.export')}
         </Button>
         {last?.path && (
           <div className="row">
             <span className="muted small mono">{last.path}</span>
-            <Button size="sm" icon="📂" onClick={() => void api.themes.revealFile(last.path!)}>
+            <Button size="sm" icon="folder-open" onClick={() => void api.themes.revealFile(last.path!)}>
               {t('share.showInFolder')}
             </Button>
           </div>

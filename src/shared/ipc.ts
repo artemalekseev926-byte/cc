@@ -1,6 +1,8 @@
 import type { MeasuredReport } from './perf/measure';
 import type { Asset, Theme } from './theme/schema';
 import type { ClassifiedFile } from './sharing/import';
+import type { AppActionResult, AppsStatus } from './system/apps';
+import type { SetTweakResult, TweakId, TweakState, TweakValue } from './system/tweaks';
 
 export const IPC = {
   platformCapabilities: 'platform:capabilities',
@@ -25,6 +27,18 @@ export const IPC = {
   desktopStop: 'desktop:stop',
   desktopRestore: 'desktop:restore',
   desktopStatus: 'desktop:status',
+  desktopSetPaused: 'desktop:setPaused',
+  systemTweaks: 'system:tweaks',
+  systemSetTweak: 'system:setTweak',
+  systemRestartExplorer: 'system:restartExplorer',
+  appsStatus: 'apps:status',
+  appsInstall: 'apps:install',
+  appsUninstall: 'apps:uninstall',
+  appShowStudio: 'app:showStudio',
+  appHideFlyout: 'app:hideFlyout',
+  appQuit: 'app:quit',
+  settingsChanged: 'settings:changed',
+  wallpaperControls: 'wallpaper:controls',
   perfProbe: 'perf:probe',
   perfProgress: 'perf:progress',
   settingsGet: 'settings:get',
@@ -138,7 +152,33 @@ export interface Settings {
   authorName: string;
   beginnerMode: boolean;
   onboardingDone: boolean;
+  wallpaperVolume: number;
+  wallpaperMuted: boolean;
+  wallpaperSaturation: number;
+  wallpaperSpeed: number;
+  launchCount: number;
+  supportPromptDisabled: boolean;
 }
+
+export const SETTINGS_RANGES: Partial<Record<keyof Settings, [number, number]>> = {
+  wallpaperVolume: [0, 1],
+  wallpaperSaturation: [0, 2],
+  wallpaperSpeed: [0.25, 2],
+  launchCount: [0, 1_000_000],
+};
+
+export interface WallpaperControls {
+  volume: number;
+  muted: boolean;
+  saturation: number;
+  speed: number;
+}
+
+export function controlsFromSettings(s: Settings): WallpaperControls {
+  return { volume: s.wallpaperVolume, muted: s.wallpaperMuted, saturation: s.wallpaperSaturation, speed: s.wallpaperSpeed };
+}
+
+export const AUTHOR_GITHUB_URL = 'https://github.com/artemalekseev926-byte/cc';
 
 export const DEFAULT_SETTINGS: Settings = {
   language: 'auto',
@@ -149,6 +189,12 @@ export const DEFAULT_SETTINGS: Settings = {
   authorName: '',
   beginnerMode: true,
   onboardingDone: false,
+  wallpaperVolume: 0.7,
+  wallpaperMuted: false,
+  wallpaperSaturation: 1,
+  wallpaperSpeed: 1,
+  launchCount: 0,
+  supportPromptDisabled: false,
 };
 
 export interface WallpaperFrameReport {
@@ -171,7 +217,7 @@ export interface DeskforgeApi {
     capturePreview(themeId: string, rect: { x: number; y: number; width: number; height: number }): Promise<{ bytes: number; url: string }>;
     folderSize(themeId: string): Promise<number>;
     openFolder(themeId: string): Promise<void>;
-    pickFiles(kind: 'image' | 'video' | 'any'): Promise<string[]>;
+    pickFiles(kind: 'image' | 'video' | 'audio' | 'any'): Promise<string[]>;
     exportPackage(themeId: string): Promise<ExportResult>;
     importPackage(path?: string): Promise<Theme | null>;
     revealFile(path: string): Promise<void>;
@@ -185,7 +231,21 @@ export interface DeskforgeApi {
     stop(): Promise<void>;
     restoreOriginal(): Promise<ApplyResult>;
     status(): Promise<DesktopStatus>;
+    setPaused(paused: boolean): Promise<void>;
     onStatus(cb: (s: DesktopStatus) => void): () => void;
+  };
+  system: {
+    tweaks(): Promise<TweakState[]>;
+    setTweak(id: TweakId, value: TweakValue): Promise<SetTweakResult>;
+    restartExplorer(): Promise<void>;
+    appsStatus(): Promise<AppsStatus>;
+    installApp(id: string): Promise<AppActionResult>;
+    uninstallApp(id: string): Promise<AppActionResult>;
+  };
+  app: {
+    showStudio(): void;
+    hideFlyout(): void;
+    quit(): void;
   };
   perf: {
     probe(theme: Theme, seconds: number): Promise<MeasuredReport>;
@@ -194,11 +254,13 @@ export interface DeskforgeApi {
   settings: {
     get(): Promise<Settings>;
     set(patch: Partial<Settings>): Promise<Settings>;
+    onChanged(cb: (s: Settings) => void): () => void;
   };
   wallpaper: {
     onTheme(cb: (theme: Theme | null) => void): () => void;
     onPause(cb: (paused: boolean) => void): () => void;
     onCursor(cb: (pos: { x: number; y: number }) => void): () => void;
+    onControls(cb: (controls: WallpaperControls) => void): () => void;
     reportFrames(report: WallpaperFrameReport): void;
     ready(): void;
   };

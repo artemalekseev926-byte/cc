@@ -1,5 +1,5 @@
 import { BrowserWindow, ipcMain, powerMonitor, screen, type Display } from 'electron';
-import { IPC, type DesktopStatus } from '../shared/ipc';
+import { IPC, type DesktopStatus, type WallpaperControls } from '../shared/ipc';
 import type { Theme } from '../shared/theme/schema';
 import type { PlatformAdapter } from './platform';
 import { createWallpaperWindow, loadPage } from './windows';
@@ -24,6 +24,7 @@ export class WallpaperHost {
   private previewTimer: NodeJS.Timeout | null = null;
   private themeBeforePreview: Theme | null = null;
   private statusListeners: Array<(s: DesktopStatus) => void> = [];
+  private controls: WallpaperControls = { volume: 0.7, muted: false, saturation: 1, speed: 1 };
 
   constructor(private readonly platform: PlatformAdapter) {
     platform.onShellRestart(() => this.reattach());
@@ -36,7 +37,13 @@ export class WallpaperHost {
       surface.ready = true;
       surface.win.webContents.send(IPC.wallpaperTheme, this.theme);
       surface.win.webContents.send(IPC.wallpaperPause, this.paused);
+      surface.win.webContents.send(IPC.wallpaperControls, this.controls);
     });
+  }
+
+  setControls(controls: WallpaperControls): void {
+    this.controls = controls;
+    this.broadcast(IPC.wallpaperControls, controls);
   }
 
   get activeTheme(): Theme | null {
@@ -129,8 +136,9 @@ export class WallpaperHost {
     const win = createWallpaperWindow({ ...display.bounds });
     const surface: Surface = { displayId: display.id, win, ready: false };
     this.surfaces.push(surface);
-    win.webContents.setAudioMuted(true);
-    await loadPage(win, 'wallpaper', { display: String(display.id) });
+    const primary = display.id === screen.getPrimaryDisplay().id;
+    win.webContents.setAudioMuted(!primary);
+    await loadPage(win, 'wallpaper', { display: String(display.id), sound: primary ? '1' : '0' });
     if (win.isDestroyed()) return;
     const attached = this.platform.attachWallpaperWindow(win, this.boundsFor(display));
     if (!attached) {

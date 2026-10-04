@@ -2,13 +2,12 @@ import type { Estimate, Rating } from '../../shared/perf/estimator';
 import { useT } from '../app/i18n';
 
 export const RATING_TONE: Record<Rating, 'ok' | 'warn' | 'bad'> = { light: 'ok', medium: 'ok', heavy: 'warn', extreme: 'bad' };
-export const RATING_ICON: Record<Rating, string> = { light: '🟢', medium: '🟡', heavy: '🟠', extreme: '🔴' };
 
 export function RatingBadge({ rating }: { rating: Rating }) {
   const t = useT();
   return (
     <span className={`badge badge-${RATING_TONE[rating]}`} title={t(`rating.${rating}.desc`)}>
-      {RATING_ICON[rating]} {t(`rating.${rating}`)}
+      <span className={`dot dot-${rating}`} /> {t(`rating.${rating}`)}
     </span>
   );
 }

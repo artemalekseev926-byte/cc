@@ -9,6 +9,7 @@ import { useT, type TFunction } from '../app/i18n';
 import { usePrimaryDisplay, useStudio } from '../app/store';
 import { DesktopPreview } from '../components/DesktopPreview';
 import { RatingBadge } from '../components/PerfMeter';
+import { Icon } from '../components/Icon';
 import { Button, Empty, Modal, Segmented, Tip } from '../components/ui';
 
 type Filter = 'all' | 'local' | 'builtin';
@@ -95,11 +96,11 @@ export function Library() {
         </div>
         <div className="row">
           {desktop.running && (
-            <Button icon="⏹" onClick={() => void api.desktop.stop()}>
+            <Button icon="stop" onClick={() => void api.desktop.stop()}>
               {t('library.stopWallpaper')}
             </Button>
           )}
-          <Button variant="primary" size="lg" icon="＋" onClick={() => setCreating(true)}>
+          <Button variant="primary" size="lg" icon="plus" onClick={() => setCreating(true)}>
             {t('library.create')}
           </Button>
         </div>
@@ -121,7 +122,7 @@ export function Library() {
       </div>
 
       {shown.length === 0 ? (
-        <Empty icon="🖼️" title={t('library.empty')}>
+        <Empty icon="image" title={t('library.empty')}>
           <Button variant="primary" onClick={() => setCreating(true)}>
             {t('library.create')}
           </Button>
@@ -152,7 +153,9 @@ function ThemeCard({ summary, active, displayWidth }: { summary: ThemeSummary; a
         ) : (
           <DesktopPreview theme={summary.theme} displayWidth={displayWidth} paused={!hover} chrome={false} />
         )}
-        {active && <span className="badge badge-accent thumb-badge">✓ {t('library.active')}</span>}
+        {active && <span className="badge badge-accent thumb-badge">
+            <Icon name="check" size={12} /> {t('library.active')}
+          </span>}
         <span className="thumb-source">{t(`library.source.${summary.source}`)}</span>
       </div>
       <div className="theme-meta">
@@ -163,19 +166,18 @@ function ThemeCard({ summary, active, displayWidth }: { summary: ThemeSummary; a
         <div className="muted small">{summary.author ? t('library.by', { author: summary.author }) : ' '}</div>
       </div>
       <div className="theme-actions">
-        <Button variant="primary" icon="✔" onClick={() => void actions.apply(summary.id)}>
+        <Button variant="primary" icon="check" onClick={() => void actions.apply(summary.id)}>
           {t('library.apply')}
         </Button>
-        <Button icon="✏️" onClick={() => void actions.edit(summary)}>
+        <Button icon="pencil" onClick={() => void actions.edit(summary)}>
           {t('library.edit')}
         </Button>
         <div className="menu">
-          <Button variant="ghost" title={t('library.more')}>
-            ⋯
+          <Button variant="ghost" icon="more" title={t('library.more')}>
           </Button>
           <div className="menu-items">
             <button type="button" onClick={() => actions.perf(summary.id)}>
-              ⚡ {t('library.testPerf')}
+              <Icon name="gauge" size={15} /> {t('library.testPerf')}
             </button>
             <button type="button" onClick={() => void actions.duplicate(summary)}>
               ⧉ {t('library.duplicate')}
@@ -183,13 +185,13 @@ function ThemeCard({ summary, active, displayWidth }: { summary: ThemeSummary; a
             {summary.source === 'local' && (
               <>
                 <button type="button" onClick={() => void actions.exportFile(summary.id)}>
-                  📦 {t('library.export')}
+                  <Icon name="package" size={15} /> {t('library.export')}
                 </button>
                 <button type="button" onClick={() => void api.themes.openFolder(summary.id)}>
-                  📂 {t('library.openFolder')}
+                  <Icon name="folder-open" size={15} /> {t('library.openFolder')}
                 </button>
                 <button type="button" className="danger" onClick={() => void actions.remove(summary)}>
-                  🗑 {t('library.delete')}
+                  <Icon name="trash" size={15} /> {t('library.delete')}
                 </button>
               </>
             )}
@@ -237,25 +239,25 @@ export function NewThemeDialog({ onClose }: { onClose: () => void }) {
       {mode === 'choose' ? (
         <div className="choice-grid">
           <button type="button" className="choice" onClick={() => setMode('template')}>
-            <span className="choice-icon">🎨</span>
+            <Icon name="palette" size={38} strokeWidth={1.4} className="choice-icon" />
             <strong>{t('new.template')}</strong>
             <span className="muted">{t('new.templateDesc')}</span>
           </button>
           <button type="button" className="choice" onClick={() => void fromMedia()} disabled={!isDesktopApp}>
-            <span className="choice-icon">🖼️</span>
+            <Icon name="image-plus" size={38} strokeWidth={1.4} className="choice-icon" />
             <strong>{t('new.fromMedia')}</strong>
             <span className="muted">{t('new.fromMediaDesc')}</span>
           </button>
           <button type="button" className="choice" onClick={() => void blank()}>
-            <span className="choice-icon">✨</span>
+            <Icon name="sparkles" size={38} strokeWidth={1.4} className="choice-icon" />
             <strong>{t('new.blank')}</strong>
             <span className="muted">{t('new.blankDesc')}</span>
           </button>
         </div>
       ) : (
         <>
-          <Button variant="ghost" onClick={() => setMode('choose')}>
-            ← {t('common.back')}
+          <Button variant="ghost" icon="arrow-left" onClick={() => setMode('choose')}>
+            {t('common.back')}
           </Button>
           <div className="grid grid-small">
             {PRESETS.map(({ theme, blurbKey }) => (

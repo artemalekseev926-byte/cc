@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
-import { DEFAULT_SETTINGS, type Settings } from '../shared/ipc';
+import { DEFAULT_SETTINGS, SETTINGS_RANGES, type Settings } from '../shared/ipc';
 
 export class SettingsStore {
   private value: Settings = { ...DEFAULT_SETTINGS };
@@ -29,7 +29,10 @@ export class SettingsStore {
     for (const [key, val] of Object.entries(patch)) {
       if (!(key in DEFAULT_SETTINGS)) continue;
       const expected = typeof (DEFAULT_SETTINGS as unknown as Record<string, unknown>)[key];
-      if (key === 'activeThemeId' ? val === null || typeof val === 'string' : typeof val === expected) next[key] = val;
+      if (key === 'activeThemeId' ? val === null || typeof val === 'string' : typeof val === expected) {
+        const range = SETTINGS_RANGES[key as keyof Settings];
+        next[key] = range && typeof val === 'number' ? Math.min(range[1], Math.max(range[0], Number.isFinite(val) ? val : range[0])) : val;
+      }
     }
     this.value = next as unknown as Settings;
     await fs.writeFile(this.file, JSON.stringify(this.value, null, 2), 'utf8');

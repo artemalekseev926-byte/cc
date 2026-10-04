@@ -10,6 +10,15 @@ export interface MediaInfo {
 }
 
 export function probeMedia(url: string, kind: Asset['kind']): Promise<MediaInfo> {
+  if (kind === 'audio') {
+    return new Promise((resolve) => {
+      const audio = new Audio();
+      audio.preload = 'metadata';
+      audio.onloadedmetadata = () => resolve({ durationSec: Number.isFinite(audio.duration) ? audio.duration : undefined });
+      audio.onerror = () => resolve({});
+      audio.src = url;
+    });
+  }
   if (kind === 'image') {
     return new Promise((resolve) => {
       const img = new Image();

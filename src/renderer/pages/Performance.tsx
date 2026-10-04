@@ -10,7 +10,8 @@ import { DesktopPreview } from '../components/DesktopPreview';
 import { RatingBadge } from '../components/PerfMeter';
 import { Button, Empty, ProgressBar, Segmented, Tip } from '../components/ui';
 import { FIXABLE, applyRecommendation } from '../editor/Inspector';
-import { LAYER_ICONS } from '../editor/LayerList';
+import { LayerIcon } from '../editor/LayerList';
+import { Icon } from '../components/Icon';
 
 function Bar({ label, value, max, unit, hint }: { label: string; value: number; max: number; unit: string; hint?: string }) {
   const ratio = value / max;
@@ -60,7 +61,7 @@ export function Performance() {
       {summary ? (
         <PerformanceReport key={summary.id} theme={summary.theme} editable={summary.source === 'local'} />
       ) : (
-        <Empty icon="⚡" title={t('perf.noTheme')}>
+        <Empty icon="gauge" title={t('perf.noTheme')}>
           <Button onClick={() => go('library')}>{t('nav.library')}</Button>
         </Empty>
       )}
@@ -148,7 +149,7 @@ function PerformanceReport({ theme: initial, editable }: { theme: Theme; editabl
           {estimate.layers.map((l) => (
             <div key={l.layerId} className="layer-cost-row">
               <span>
-                {LAYER_ICONS[l.layerType]} {l.layerName}
+                <LayerIcon type={l.layerType} size={14} /> {l.layerName}
               </span>
               <div className="layer-cost-bar">
                 <div style={{ width: `${((l.cpu + l.gpu) / maxLayer) * 100}%` }} />
@@ -162,7 +163,9 @@ function PerformanceReport({ theme: initial, editable }: { theme: Theme; editabl
 
         {estimate.recommendations.length > 0 && (
           <div className="card pad">
-            <h2>💡 {t('perf.recommendations')}</h2>
+            <h2 className="with-icon">
+              <Icon name="lightbulb" size={18} /> {t('perf.recommendations')}
+            </h2>
             {estimate.recommendations.map((r, i) => (
               <div key={i} className="rec">
                 <span>
@@ -187,7 +190,7 @@ function PerformanceReport({ theme: initial, editable }: { theme: Theme; editabl
         <div className="card pad">
           <div className="row between">
             <h2>{t('perf.realTest')}</h2>
-            <Button variant="primary" icon="▶" onClick={() => void runTest()} disabled={!!progress}>
+            <Button variant="primary" icon="play" onClick={() => void runTest()} disabled={!!progress}>
               {measured ? t('perf.runAgain') : t('perf.runTest')}
             </Button>
           </div>

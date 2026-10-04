@@ -47,6 +47,16 @@ export const VideoLayerSchema = z.object({
   asset: z.string().min(1),
   fit: FitSchema.default('cover'),
   playbackRate: z.number().min(0.25).max(2).default(1),
+  sound: z.boolean().default(false),
+  volume: unit.default(0.6),
+});
+
+export const AudioLayerSchema = z.object({
+  ...layerBase,
+  type: z.literal('audio'),
+  asset: z.string().min(1),
+  volume: unit.default(0.6),
+  fadeInSeconds: z.number().min(0).max(10).default(2),
 });
 
 export const ParticlePresetSchema = z.enum(['snow', 'rain', 'fireflies', 'stars', 'bubbles', 'sakura']);
@@ -104,11 +114,12 @@ export const LayerSchema = z.discriminatedUnion('type', [
   ShaderLayerSchema,
   ClockLayerSchema,
   TextLayerSchema,
+  AudioLayerSchema,
 ]);
 
 export const AssetSchema = z.object({
   file: z.string().min(1),
-  kind: z.enum(['image', 'video']),
+  kind: z.enum(['image', 'video', 'audio']),
   bytes: z.number().int().nonnegative(),
   width: z.number().int().positive().optional(),
   height: z.number().int().positive().optional(),
@@ -184,6 +195,7 @@ export type ShaderLayer = z.infer<typeof ShaderLayerSchema>;
 export type ShaderPreset = z.infer<typeof ShaderPresetSchema>;
 export type ClockLayer = z.infer<typeof ClockLayerSchema>;
 export type TextLayer = z.infer<typeof TextLayerSchema>;
+export type AudioLayer = z.infer<typeof AudioLayerSchema>;
 export type WidgetPosition = z.infer<typeof WidgetPositionSchema>;
 export type Asset = z.infer<typeof AssetSchema>;
 export type Wallpaper = z.infer<typeof WallpaperSchema>;
@@ -214,7 +226,7 @@ export function parseTheme(input: unknown): ParseResult {
 export function referencedAssets(theme: Pick<Theme, 'wallpaper'>): string[] {
   const keys = new Set<string>();
   for (const layer of theme.wallpaper.layers) {
-    if (layer.type === 'image' || layer.type === 'video') keys.add(layer.asset);
+    if (layer.type === 'image' || layer.type === 'video' || layer.type === 'audio') keys.add(layer.asset);
   }
   return [...keys];
 }

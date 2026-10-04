@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "koffi": "^3.3.2",
+    "lucide-react": "^1.52.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "yauzl": "^3.4.0",

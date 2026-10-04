@@ -39,7 +39,21 @@ const api: DeskforgeApi = {
     stop: () => invoke(IPC.desktopStop),
     restoreOriginal: () => invoke(IPC.desktopRestore),
     status: () => invoke(IPC.desktopStatus),
+    setPaused: (paused) => invoke(IPC.desktopSetPaused, paused),
     onStatus: (cb) => listen(IPC.desktopStatusChanged, cb),
+  },
+  system: {
+    tweaks: () => invoke(IPC.systemTweaks),
+    setTweak: (id, value) => invoke(IPC.systemSetTweak, id, value),
+    restartExplorer: () => invoke(IPC.systemRestartExplorer),
+    appsStatus: () => invoke(IPC.appsStatus),
+    installApp: (id) => invoke(IPC.appsInstall, id),
+    uninstallApp: (id) => invoke(IPC.appsUninstall, id),
+  },
+  app: {
+    showStudio: () => ipcRenderer.send(IPC.appShowStudio),
+    hideFlyout: () => ipcRenderer.send(IPC.appHideFlyout),
+    quit: () => ipcRenderer.send(IPC.appQuit),
   },
   perf: {
     probe: (theme, seconds) => invoke(IPC.perfProbe, theme, seconds),
@@ -48,11 +62,13 @@ const api: DeskforgeApi = {
   settings: {
     get: () => invoke(IPC.settingsGet),
     set: (patch) => invoke(IPC.settingsSet, patch),
+    onChanged: (cb) => listen(IPC.settingsChanged, cb),
   },
   wallpaper: {
     onTheme: (cb) => listen(IPC.wallpaperTheme, cb),
     onPause: (cb) => listen(IPC.wallpaperPause, cb),
     onCursor: (cb) => listen(IPC.wallpaperCursor, cb),
+    onControls: (cb) => listen(IPC.wallpaperControls, cb),
     reportFrames: (report) => ipcRenderer.send(IPC.wallpaperFrames, report),
     ready: () => ipcRenderer.send(IPC.wallpaperReady),
   },

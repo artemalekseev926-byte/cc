@@ -1,6 +1,6 @@
 import type { Tool } from '../../shared/editor/tools';
 import { themeFileUrl } from '../../shared/ipc';
-import { createLayer, createParticlesLayer, createShaderLayer, createImageLayer, createVideoLayer } from '../../shared/theme/factory';
+import { createAudioLayer, createLayer, createParticlesLayer, createShaderLayer, createImageLayer, createVideoLayer } from '../../shared/theme/factory';
 import type { Layer, ParticlePreset, ShaderPreset } from '../../shared/theme/schema';
 import { humanizeFileName } from '../../shared/sharing/import';
 import { api } from '../app/api';
@@ -55,7 +55,7 @@ export async function importMediaFiles(paths: string[], t: TFunction): Promise<v
       useStudio.getState().edit((draft) => {
         draft.assets[key] = { ...asset, ...info };
       });
-      insertLayer(asset.kind === 'video' ? createVideoLayer(key, name) : createImageLayer(key, name), t);
+      insertLayer(asset.kind === 'video' ? createVideoLayer(key, name) : asset.kind === 'audio' ? createAudioLayer(key, name) : createImageLayer(key, name), t);
       if (asset.kind === 'video' && info.width && info.width > 2560) state.toast('info', t('import.largeVideoHint'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

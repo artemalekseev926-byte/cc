@@ -28,6 +28,9 @@ export interface Win32 {
   getAutoHide: () => boolean;
   queryUserNotificationState: () => number;
   broadcastSettingChange: (area: string) => void;
+  getMouseAcceleration: () => boolean;
+  setMouseAcceleration: (on: boolean) => boolean;
+  refreshShell: () => void;
 }
 
 export interface Rect {
@@ -105,6 +108,9 @@ function bind(): Win32 {
   const DwmSetWindowAttribute = dwmapi.func('int32_t __stdcall DwmSetWindowAttribute(intptr_t hwnd, uint32_t attr, _In_ uint32_t *value, uint32_t size)');
   const SHAppBarMessage = shell32.func('uintptr_t __stdcall SHAppBarMessage(uint32_t msg, _Inout_ DF_APPBARDATA *data)');
   const SHQueryUserNotificationState = shell32.func('int32_t __stdcall SHQueryUserNotificationState(_Out_ int *state)');
+  const SHChangeNotify = shell32.func('void __stdcall SHChangeNotify(int32_t eventId, uint32_t flags, void *item1, void *item2)');
+  const SPIGetMouse = user32.func('bool __stdcall SystemParametersInfoW(uint32_t action, uint32_t uiParam, _Inout_ int *values, uint32_t winIni)');
+  const SPISetMouse = user32.func('bool __stdcall SystemParametersInfoW(uint32_t action, uint32_t uiParam, _In_ int *values, uint32_t winIni)');
 
   const SPI_GETANIMATION = 0x0048;
   const SPI_SETANIMATION = 0x0049;
@@ -175,6 +181,15 @@ function bind(): Win32 {
     queryUserNotificationState: () => {
       const out = [0];
       return SHQueryUserNotificationState(out) === 0 ? out[0] : 0;
+    },
+    getMouseAcceleration: () => {
+      const values = [0, 0, 0];
+      SPIGetMouse(0x0003, 0, values, 0);
+      return values[2] !== 0;
+    },
+    setMouseAcceleration: (on) => SPISetMouse(0x0004, 0, on ? [6, 10, 1] : [0, 0, 0], SPIF_UPDATE_AND_SEND),
+    refreshShell: () => {
+      SHChangeNotify(0x08000000, 0x0000, null, null);
     },
     broadcastSettingChange: (area) => {
       SendMessageTimeoutStr(HWND_BROADCAST, WM_SETTINGCHANGE, 0, area, SMTO_ABORTIFHUNG, 1000, [0]);

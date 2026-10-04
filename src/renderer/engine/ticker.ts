@@ -5,11 +5,10 @@ export class Ticker {
   private raf = 0;
   private last = 0;
   private lastFrame = 0;
-  private start = performance.now();
-  private pausedAt: number | null = null;
-  private pausedTotal = 0;
+  private elapsed = 0;
   private frameTimes: number[] = [];
   private fps: number;
+  private scale = 1;
   private paused = false;
 
   constructor(fps: number) {
@@ -20,9 +19,12 @@ export class Ticker {
     this.fps = fps;
   }
 
+  setTimeScale(scale: number) {
+    this.scale = Math.max(0, Math.min(4, scale));
+  }
+
   get time(): number {
-    const now = this.pausedAt ?? performance.now();
-    return (now - this.start - this.pausedTotal) / 1000;
+    return this.elapsed;
   }
 
   subscribe(fn: TickFn): () => void {
@@ -37,12 +39,9 @@ export class Ticker {
     if (paused === this.paused) return;
     this.paused = paused;
     if (paused) {
-      this.pausedAt = performance.now();
       cancelAnimationFrame(this.raf);
       this.raf = 0;
     } else {
-      if (this.pausedAt !== null) this.pausedTotal += performance.now() - this.pausedAt;
-      this.pausedAt = null;
       this.last = 0;
       this.lastFrame = 0;
       this.ensureRunning();
@@ -75,13 +74,14 @@ export class Ticker {
     if (this.paused) return;
     const interval = 1000 / this.fps;
     if (this.last === 0 || now - this.last >= interval - 1.5) {
-      const dt = this.last === 0 ? 0 : Math.min(0.1, (now - this.last) / 1000);
+      const realDt = this.last === 0 ? 0 : Math.min(0.1, (now - this.last) / 1000);
+      const dt = realDt * this.scale;
+      this.elapsed += dt;
       this.last = now;
       if (this.lastFrame) this.frameTimes.push(now - this.lastFrame);
       if (this.frameTimes.length > 2000) this.frameTimes.splice(0, 1000);
       this.lastFrame = now;
-      const t = this.time;
-      for (const fn of this.subscribers) fn(t, dt);
+      for (const fn of this.subscribers) fn(this.elapsed, dt);
     }
     if (this.subscribers.size > 0) this.raf = requestAnimationFrame(this.loop);
   };

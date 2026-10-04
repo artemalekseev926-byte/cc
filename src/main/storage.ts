@@ -128,7 +128,7 @@ export class ThemeStore {
     const theme = await this.load(themeId);
     const stat = await fs.stat(sourcePath);
     const file = classifyFile({ path: sourcePath, name: basename(sourcePath), bytes: stat.size });
-    if (file.problem || (file.kind !== 'image' && file.kind !== 'video')) throw new Error(file.problem ?? 'import.problem.unknown');
+    if (file.problem || (file.kind !== 'image' && file.kind !== 'video' && file.kind !== 'audio')) throw new Error(file.problem ?? 'import.problem.unknown');
     const { key, asset } = await this.copyAsset(themeId, file, theme.assets);
     theme.assets[key] = asset;
     await this.save(theme);
@@ -141,7 +141,7 @@ export class ThemeStore {
     const dir = this.dirOf(themeId)!;
     await fs.mkdir(join(dir, 'assets'), { recursive: true });
     await fs.copyFile(file.path, join(dir, relativeFile));
-    const asset: Asset = { file: relativeFile, kind: file.kind as 'image' | 'video', bytes: file.bytes };
+    const asset: Asset = { file: relativeFile, kind: file.kind as Asset['kind'], bytes: file.bytes };
     return { key, asset };
   }
 
@@ -168,7 +168,7 @@ export class ThemeStore {
       return { theme: source, files };
     }
 
-    const usable = files.filter((f) => !f.problem && (f.kind === 'image' || f.kind === 'video'));
+    const usable = files.filter((f) => !f.problem && (f.kind === 'image' || f.kind === 'video' || f.kind === 'audio'));
     if (usable.length === 0) return { theme: null, files };
 
     const name = title?.trim() || basename(usable[0].name, extname(usable[0].name));

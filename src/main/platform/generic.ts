@@ -3,6 +3,7 @@ import type { BrowserWindow } from 'electron';
 import type { ApplyResult, PlatformCapabilities } from '../../shared/ipc';
 import type { Theme } from '../../shared/theme/schema';
 import type { PlatformAdapter } from './types';
+import { TWEAKS, type SetTweakResult, type TweakState } from '../../shared/system/tweaks';
 
 export class GenericPlatform implements PlatformAdapter {
   capabilities(): PlatformCapabilities {
@@ -54,6 +55,17 @@ export class GenericPlatform implements PlatformAdapter {
   }
 
   onShellRestart(): void {
+  }
+
+  async tweaks(): Promise<TweakState[]> {
+    return TWEAKS.map((t) => ({ id: t.id, value: t.kind === 'toggle' ? false : (t.options ?? [''])[0], supported: false }));
+  }
+
+  async setTweak(): Promise<SetTweakResult> {
+    return { ok: false, error: 'apply.windowsOnly', restartExplorer: false };
+  }
+
+  async restartExplorer(): Promise<void> {
   }
 
   dispose(): void {

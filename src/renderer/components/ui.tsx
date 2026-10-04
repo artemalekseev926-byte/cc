@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
+import { Icon, type IconName } from './Icon';
 
 export function Button({
   children,
@@ -16,12 +17,12 @@ export function Button({
   disabled?: boolean;
   title?: string;
   size?: 'sm' | 'md' | 'lg';
-  icon?: string;
+  icon?: IconName;
   type?: 'button' | 'submit';
 }) {
   return (
     <button type={type} className={`btn btn-${variant} btn-${size}`} onClick={onClick} disabled={disabled} title={title}>
-      {icon && <span className="btn-icon">{icon}</span>}
+      {icon && <Icon name={icon} size={size === 'sm' ? 14 : 16} className="btn-icon" />}
       {children}
     </button>
   );
@@ -43,7 +44,11 @@ export function Field({ label, hint, children, disabled, disabledReason }: { lab
         {hint && <Hint text={hint} />}
       </div>
       <div className="field-control">{children}</div>
-      {disabled && disabledReason && <div className="field-note">🔒 {disabledReason}</div>}
+      {disabled && disabledReason && (
+        <div className="field-note">
+          <Icon name="lock" size={12} /> {disabledReason}
+        </div>
+      )}
     </div>
   );
 }
@@ -103,7 +108,7 @@ export function Segmented<T extends string | number>({
   disabled,
 }: {
   value: T;
-  options: Array<{ value: T; label: string; icon?: string; disabled?: boolean }>;
+  options: Array<{ value: T; label: string; icon?: IconName; disabled?: boolean }>;
   onChange: (v: T) => void;
   disabled?: boolean;
 }) {
@@ -119,7 +124,7 @@ export function Segmented<T extends string | number>({
           disabled={disabled || o.disabled}
           onClick={() => onChange(o.value)}
         >
-          {o.icon && <span>{o.icon}</span>}
+          {o.icon && <Icon name={o.icon} size={14} />}
           {o.label}
         </button>
       ))}
@@ -202,16 +207,18 @@ export function ProgressBar({ value, tone = 'accent' }: { value: number; tone?: 
 export function Tip({ children }: { children: ReactNode }) {
   return (
     <div className="tip">
-      <span className="tip-icon">💡</span>
+      <Icon name="lightbulb" size={16} className="tip-icon" />
       <div>{children}</div>
     </div>
   );
 }
 
-export function Empty({ icon, title, children }: { icon: string; title: string; children?: ReactNode }) {
+export function Empty({ icon, title, children }: { icon: IconName; title: string; children?: ReactNode }) {
   return (
     <div className="empty">
-      <div className="empty-icon">{icon}</div>
+      <div className="empty-icon">
+        <Icon name={icon} size={44} strokeWidth={1.4} />
+      </div>
       <h3>{title}</h3>
       {children}
     </div>

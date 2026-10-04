@@ -11,6 +11,7 @@ import { summarizeApply } from '../pages/Library';
 import { importMediaFiles } from './actions';
 import { Inspector } from './Inspector';
 import { LayerList } from './LayerList';
+import { Icon } from '../components/Icon';
 import { ToolPalette } from './ToolPalette';
 
 export function Editor() {
@@ -20,6 +21,12 @@ export function Editor() {
   const { editor, undo, redo, saveEditor, toast, go, showSection, select, settings, edit } = useStudio();
   const previewRef = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
+  const [previewSound, setPreviewSound] = useState(false);
+  const previewControls = useMemo(
+    () => (settings ? { volume: settings.wallpaperVolume, muted: false, saturation: settings.wallpaperSaturation, speed: settings.wallpaperSpeed } : undefined),
+    [settings],
+  );
+  const hasSound = theme?.wallpaper.layers.some((l) => l.visible && (l.type === 'audio' || (l.type === 'video' && l.sound))) ?? false;
   const [dragOver, setDragOver] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const estimate = useMemo(() => (theme ? estimateTheme(theme, display) : null), [theme, display]);
@@ -71,7 +78,7 @@ export function Editor() {
   if (!theme || !estimate) {
     return (
       <div className="page">
-        <Empty icon="✏️" title={t('editor.nothingOpen')}>
+        <Empty icon="pencil" title={t('editor.nothingOpen')}>
           <Button variant="primary" onClick={() => go('library')}>
             {t('editor.openLibrary')}
           </Button>
@@ -130,7 +137,7 @@ export function Editor() {
   return (
     <div className="editor">
       <header className="editor-bar">
-        <Button variant="ghost" icon="←" onClick={() => go('library')}>
+        <Button variant="ghost" icon="arrow-left" onClick={() => go('library')}>
           {t('nav.library')}
         </Button>
         <input
@@ -140,23 +147,28 @@ export function Editor() {
           onChange={(e) => edit((d) => (d.name = e.target.value || ' '), 'name')}
           aria-label={t('info.name')}
         />
-        {editor.dirty && <span className="dirty-dot" title={t('editor.unsaved')}>●</span>}
+        {editor.dirty && <span className="dirty-dot" title={t('editor.unsaved')} />}
         <div className="spacer" />
-        <Button variant="ghost" icon="↶" onClick={undo} disabled={history.past.length === 0} title={`${t('editor.undo')} (Ctrl+Z)`} />
-        <Button variant="ghost" icon="↷" onClick={redo} disabled={history.future.length === 0} title={`${t('editor.redo')} (Ctrl+Y)`} />
-        <Button icon={paused ? '▶' : '⏸'} onClick={() => setPaused(!paused)} title={t('editor.toggleAnimation')}>
+        <Button variant="ghost" icon="undo" onClick={undo} disabled={history.past.length === 0} title={`${t('editor.undo')} (Ctrl+Z)`} />
+        <Button variant="ghost" icon="redo" onClick={redo} disabled={history.future.length === 0} title={`${t('editor.redo')} (Ctrl+Y)`} />
+        <Button icon={paused ? 'play' : 'pause'} onClick={() => setPaused(!paused)} title={t('editor.toggleAnimation')}>
           {paused ? t('editor.play') : t('editor.pause')}
         </Button>
-        <Button icon="📸" onClick={() => void capturePreview()} disabled={!isDesktopApp} title={t('editor.capturePreviewHint')}>
+        {hasSound && (
+          <Button icon={previewSound ? 'volume' : 'volume-off'} onClick={() => setPreviewSound(!previewSound)} title={t('editor.previewSoundHint')}>
+            {t('editor.previewSound')}
+          </Button>
+        )}
+        <Button icon="camera" onClick={() => void capturePreview()} disabled={!isDesktopApp} title={t('editor.capturePreviewHint')}>
           {t('editor.capturePreview')}
         </Button>
-        <Button icon="👀" onClick={() => void tryLive()} title={t('editor.tryLiveHint')}>
+        <Button icon="scan-eye" onClick={() => void tryLive()} title={t('editor.tryLiveHint')}>
           {t('editor.tryLive')}
         </Button>
-        <Button icon="💾" onClick={() => void save()} disabled={editor.saving} title="Ctrl+S">
+        <Button icon="save" onClick={() => void save()} disabled={editor.saving} title="Ctrl+S">
           {t('editor.save')}
         </Button>
-        <Button variant="primary" icon="✔" onClick={() => void apply()} disabled={busy === 'apply'}>
+        <Button variant="primary" icon="check" onClick={() => void apply()} disabled={busy === 'apply'}>
           {t('editor.apply')}
         </Button>
       </header>
@@ -174,14 +186,31 @@ export function Editor() {
         >
           {settings?.beginnerMode && theme.wallpaper.layers.length <= 1 && <Tip>{t('editor.beginnerTip')}</Tip>}
           <div className="preview-frame">
-            <DesktopPreview ref={previewRef} theme={theme} displayWidth={display.width} aspect={display.width / display.height} paused={paused} highlightLayerId={null} />
+            <DesktopPreview
+              ref={previewRef}
+              theme={theme}
+              displayWidth={display.width}
+              aspect={display.width / display.height}
+              paused={paused}
+              highlightLayerId={null}
+              sound={previewSound}
+              controls={previewControls}
+            />
             {dragOver && <div className="drop-overlay">{t('editor.dropHere')}</div>}
           </div>
           <div className="canvas-shortcuts">
-            <button type="button" onClick={() => showSection('colors')}>🎨 {t('section.colors')}</button>
-            <button type="button" onClick={() => showSection('windows')}>🪟 {t('section.windows')}</button>
-            <button type="button" onClick={() => showSection('taskbar')}>📏 {t('section.taskbar')}</button>
-            <button type="button" onClick={() => showSection('desktop')}>🗂️ {t('section.desktop')}</button>
+            <button type="button" onClick={() => showSection('colors')}>
+              <Icon name="palette" size={14} /> {t('section.colors')}
+            </button>
+            <button type="button" onClick={() => showSection('windows')}>
+              <Icon name="app-window" size={14} /> {t('section.windows')}
+            </button>
+            <button type="button" onClick={() => showSection('taskbar')}>
+              <Icon name="panel-bottom" size={14} /> {t('section.taskbar')}
+            </button>
+            <button type="button" onClick={() => showSection('desktop')}>
+              <Icon name="layout-grid" size={14} /> {t('section.desktop')}
+            </button>
           </div>
         </main>
         <Inspector estimate={estimate} />

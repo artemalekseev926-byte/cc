@@ -24,6 +24,7 @@ export default defineConfig({
       input: {
         index: resolve(root, 'src/renderer/index.html'),
         wallpaper: resolve(root, 'src/renderer/wallpaper.html'),
+        tray: resolve(root, 'src/renderer/tray.html'),
       },
     },
   },

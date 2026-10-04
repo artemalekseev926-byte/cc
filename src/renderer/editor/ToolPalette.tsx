@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { CATEGORY_ICONS, CATEGORY_ORDER, TOOLS, searchTools, type Tool, type ToolCategory } from '../../shared/editor/tools';
 import { useT } from '../app/i18n';
 import { useStudio } from '../app/store';
+import { Icon, isIconName } from '../components/Icon';
 import { runTool } from './actions';
 
 export function ToolPalette() {
@@ -24,7 +25,10 @@ export function ToolPalette() {
   return (
     <aside className="panel tool-palette">
       <div className="panel-title">{t('editor.tools')}</div>
-      <input className="search tool-search" placeholder={t('editor.searchTools')} value={query} onChange={(e) => setQuery(e.target.value)} autoFocus={beginner} />
+      <label className="search-box tool-search">
+        <Icon name="search" size={16} />
+        <input placeholder={t('editor.searchTools')} value={query} onChange={(e) => setQuery(e.target.value)} autoFocus={beginner} />
+      </label>
 
       {results ? (
         <div className="tool-list">
@@ -34,7 +38,11 @@ export function ToolPalette() {
         <div className="tool-scroll">
           {beginner && (
             <section className="tool-group">
-              <div className="tool-group-title static">⭐ {t('editor.popular')}</div>
+              <div className="tool-group-title static">
+                <span className="with-icon">
+                  <Icon name="star" size={15} /> {t('editor.popular')}
+                </span>
+              </div>
               <div className="tool-tiles">
                 {popular.map((tool) => (
                   <ToolTile key={tool.id} tool={tool} />
@@ -48,10 +56,10 @@ export function ToolPalette() {
             return (
               <section key={category} className="tool-group">
                 <button type="button" className="tool-group-title" onClick={() => toggle(category)} aria-expanded={isOpen}>
-                  <span>
-                    {CATEGORY_ICONS[category]} {t(`category.${category}`)}
+                  <span className="with-icon">
+                    <ToolGlyph name={CATEGORY_ICONS[category]} size={16} /> {t(`category.${category}`)}
                   </span>
-                  <span className="chev">{isOpen ? '▾' : '▸'}</span>
+                  <Icon name={isOpen ? 'chevron-down' : 'chevron-right'} size={15} className="chev" />
                 </button>
                 {isOpen && (
                   <div className="tool-list">
@@ -73,7 +81,9 @@ function ToolCard({ tool }: { tool: Tool }) {
   const t = useT();
   return (
     <button type="button" className="tool-card" onClick={() => void runTool(tool, t)} title={t(`tool.${tool.id}.desc`)}>
-      <span className="tool-icon">{tool.icon}</span>
+      <span className="tool-icon">
+        <ToolGlyph name={tool.icon} size={22} />
+      </span>
       <span className="tool-text">
         <strong>{t(`tool.${tool.id}.title`)}</strong>
         <span>{t(`tool.${tool.id}.desc`)}</span>
@@ -86,8 +96,14 @@ function ToolTile({ tool }: { tool: Tool }) {
   const t = useT();
   return (
     <button type="button" className="tool-tile" onClick={() => void runTool(tool, t)} title={t(`tool.${tool.id}.desc`)}>
-      <span className="tool-icon">{tool.icon}</span>
+      <span className="tool-icon">
+        <ToolGlyph name={tool.icon} size={22} />
+      </span>
       <span>{t(`tool.${tool.id}.title`)}</span>
     </button>
   );
+}
+
+function ToolGlyph({ name, size }: { name: string; size: number }) {
+  return <Icon name={isIconName(name) ? name : 'sparkles'} size={size} strokeWidth={1.7} />;
 }

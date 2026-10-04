@@ -4,11 +4,13 @@ import { PRESETS } from '../../shared/theme/presets';
 import { slugify, type Theme } from '../../shared/theme/schema';
 import { buildMeasuredReport, frameStatsFromTimes } from '../../shared/perf/measure';
 import { estimateTheme } from '../../shared/perf/estimator';
+import { TWEAKS } from '../../shared/system/tweaks';
 
 function createMockApi(): DeskforgeApi {
   const themes = new Map<string, Theme>();
   let settings: Settings = { ...DEFAULT_SETTINGS };
   const listeners = new Set<() => void>();
+  const settingsListeners = new Set<(s: Settings) => void>();
   const changed = () => listeners.forEach((l) => l());
   const noop = () => () => undefined;
   const summaries = (): ThemeSummary[] => [
@@ -87,6 +89,7 @@ function createMockApi(): DeskforgeApi {
       stop: async () => undefined,
       restoreOriginal: async () => ({ ok: true, steps: [], explorerRestarted: false }),
       status: async () => ({ activeThemeId: null, running: false, paused: false, pauseReason: null }),
+      setPaused: async () => undefined,
       onStatus: noop,
     },
     perf: {
@@ -105,14 +108,40 @@ function createMockApi(): DeskforgeApi {
       },
       onProgress: noop,
     },
+    system: {
+      tweaks: async () =>
+        TWEAKS.map((t) => ({ id: t.id, value: t.kind === 'toggle' ? t.id !== 'webSearch' : (t.options ?? [''])[1], supported: true })),
+      setTweak: async (id) => ({ ok: true, restartExplorer: TWEAKS.find((t) => t.id === id)?.restartExplorer ?? false }),
+      restartExplorer: async () => undefined,
+      appsStatus: async () => ({ wingetAvailable: true, installed: ['powertoys'] }),
+      installApp: async () => {
+        await new Promise((r) => setTimeout(r, 1200));
+        return { ok: true };
+      },
+      uninstallApp: async () => ({ ok: true }),
+    },
+    app: {
+      showStudio: () => undefined,
+      hideFlyout: () => undefined,
+      quit: () => undefined,
+    },
     settings: {
       get: async () => settings,
-      set: async (patch) => (settings = { ...settings, ...patch }),
+      set: async (patch) => {
+        settings = { ...settings, ...patch };
+        settingsListeners.forEach((l) => l(settings));
+        return settings;
+      },
+      onChanged: (cb) => {
+        settingsListeners.add(cb);
+        return () => settingsListeners.delete(cb);
+      },
     },
     wallpaper: {
       onTheme: noop,
       onPause: noop,
       onCursor: noop,
+      onControls: noop,
       reportFrames: () => undefined,
       ready: () => undefined,
     },

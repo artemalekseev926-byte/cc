@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MutableRefObject } from 'react';
 import type {
+  AudioLayer,
   ClockLayer,
   GradientLayer,
   ImageLayer,
@@ -17,12 +18,23 @@ import { Ticker } from './ticker';
 
 export type CursorRef = MutableRefObject<{ x: number; y: number } | null>;
 
+export interface StageControls {
+  volume: number;
+  muted: boolean;
+  saturation: number;
+  speed: number;
+}
+
+export const DEFAULT_CONTROLS: StageControls = { volume: 0.7, muted: false, saturation: 1, speed: 1 };
+
 interface StageContext {
   ticker: Ticker;
   scale: number;
   paused: boolean;
   cursor: CursorRef;
   assetUrl: (key: string) => string | undefined;
+  controls: StageControls;
+  sound: boolean;
 }
 
 const Ctx = createContext<StageContext | null>(null);
@@ -38,26 +50,50 @@ export interface StageProps {
   className?: string;
   style?: CSSProperties;
   highlightLayerId?: string | null;
+  controls?: StageControls;
+  sound?: boolean;
 }
 
-export function Stage({ theme, assetUrl, paused = false, scale = 1, cursor, onTicker, className, style, highlightLayerId }: StageProps) {
+export function Stage({
+  theme,
+  assetUrl,
+  paused = false,
+  scale = 1,
+  cursor,
+  onTicker,
+  className,
+  style,
+  highlightLayerId,
+  controls = DEFAULT_CONTROLS,
+  sound = false,
+}: StageProps) {
   const fallbackCursor = useRef<{ x: number; y: number } | null>(null);
   const [ticker] = useState(() => new Ticker(theme.wallpaper.fpsLimit));
   useEffect(() => ticker.setFps(theme.wallpaper.fpsLimit), [ticker, theme.wallpaper.fpsLimit]);
   useEffect(() => ticker.setPaused(paused), [ticker, paused]);
+  useEffect(() => ticker.setTimeScale(controls.speed), [ticker, controls.speed]);
   useEffect(() => {
     onTicker?.(ticker);
   }, [ticker, onTicker]);
   useEffect(() => () => ticker.dispose(), [ticker]);
 
   const ctx = useMemo<StageContext>(
-    () => ({ ticker, scale, paused, cursor: cursor ?? fallbackCursor, assetUrl }),
-    [ticker, scale, paused, cursor, assetUrl],
+    () => ({ ticker, scale, paused, cursor: cursor ?? fallbackCursor, assetUrl, controls, sound }),
+    [ticker, scale, paused, cursor, assetUrl, controls, sound],
   );
 
   return (
     <Ctx.Provider value={ctx}>
-      <div className={className} style={{ position: 'relative', overflow: 'hidden', background: '#000', ...style }}>
+      <div
+        className={className}
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          background: '#000',
+          filter: Math.abs(controls.saturation - 1) > 0.01 ? `saturate(${controls.saturation})` : undefined,
+          ...style,
+        }}
+      >
         {theme.wallpaper.layers.map((layer) =>
           layer.visible ? (
             <div
@@ -99,6 +135,8 @@ function LayerView({ layer, theme }: { layer: Layer; theme: Theme }) {
       return <ClockView layer={layer} />;
     case 'text':
       return <TextView layer={layer} />;
+    case 'audio':
+      return <AudioView layer={layer} />;
   }
 }
 
@@ -170,17 +208,24 @@ function ImageView({ layer }: { layer: ImageLayer }) {
   );
 }
 
+function effectiveVolume(layerVolume: number, controls: StageControls, sound: boolean) {
+  return sound && !controls.muted ? Math.max(0, Math.min(1, layerVolume * controls.volume)) : 0;
+}
+
 function VideoView({ layer }: { layer: VideoLayer; theme: Theme }) {
-  const { assetUrl, paused } = useStage();
+  const { assetUrl, paused, controls, sound } = useStage();
   const ref = useRef<HTMLVideoElement>(null);
   const src = assetUrl(layer.asset);
+  const volume = layer.sound ? effectiveVolume(layer.volume, controls, sound) : 0;
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
-    v.playbackRate = layer.playbackRate;
-    if (paused) v.pause();
+    v.playbackRate = Math.max(0.0625, Math.min(16, layer.playbackRate * controls.speed));
+    v.volume = volume;
+    v.muted = volume === 0;
+    if (paused || controls.speed === 0) v.pause();
     else void v.play().catch(() => undefined);
-  }, [paused, layer.playbackRate, src]);
+  }, [paused, layer.playbackRate, controls.speed, volume, src]);
   if (!src) return <MissingAsset />;
   return (
     <video
@@ -342,6 +387,41 @@ function TextView({ layer }: { layer: TextLayer }) {
       </div>
     </div>
   );
+}
+
+function AudioView({ layer }: { layer: AudioLayer }) {
+  const { assetUrl, paused, controls, sound } = useStage();
+  const ref = useRef<HTMLAudioElement>(null);
+  const src = sound ? assetUrl(layer.asset) : undefined;
+  const target = effectiveVolume(layer.volume, controls, sound);
+  const started = useRef(false);
+  useEffect(() => {
+    const a = ref.current;
+    if (!a) return;
+    if (paused) {
+      a.pause();
+      return;
+    }
+    let raf = 0;
+    if (!started.current && layer.fadeInSeconds > 0) {
+      started.current = true;
+      a.volume = 0;
+      const start = performance.now();
+      const step = () => {
+        const k = Math.min(1, (performance.now() - start) / (layer.fadeInSeconds * 1000));
+        a.volume = target * k;
+        if (k < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    } else {
+      started.current = true;
+      a.volume = target;
+    }
+    void a.play().catch(() => undefined);
+    return () => cancelAnimationFrame(raf);
+  }, [paused, target, layer.fadeInSeconds, src]);
+  if (!src) return null;
+  return <audio ref={ref} src={src} loop preload="auto" />;
 }
 
 function MissingAsset() {

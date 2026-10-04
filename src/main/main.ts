@@ -1,13 +1,14 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { app, BrowserWindow, Menu, nativeImage, shell, Tray } from 'electron';
-import { IPC, type Settings } from '../shared/ipc';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { IPC, controlsFromSettings, type Settings } from '../shared/ipc';
 import { PACKAGE_EXT } from '../shared/sharing/package';
 import { describeActive, registerIpc } from './ipc';
 import { createPlatform } from './platform';
 import { handleThemeProtocol, registerSchemePrivileges } from './protocol';
 import { SettingsStore } from './settings';
 import { ThemeStore } from './storage';
+import { TrayController, resourcePath } from './tray';
 import { WallpaperHost } from './wallpaperHost';
 import { loadPage, PRELOAD } from './windows';
 
@@ -27,7 +28,7 @@ function packageFromArgv(argv: string[]): string | null {
 }
 
 let studio: BrowserWindow | null = null;
-let tray: Tray | null = null;
+let tray: TrayController | null = null;
 let quitting = false;
 let restoring = false;
 
@@ -83,36 +84,34 @@ function showStudio() {
 }
 
 function appIconPath(): string {
-  return app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(app.getAppPath(), 'build', 'icon.png');
-}
-
-function trayIcon() {
-  const image = nativeImage.createFromPath(appIconPath());
-  if (!image.isEmpty()) return image.resize({ width: 16, height: 16, quality: 'best' });
-  const size = 16;
-  const buf = Buffer.alloc(size * size * 4);
-  for (let i = 0; i < size * size; i++) buf.set([0xff, 0x5c, 0x6c, 0xff], i * 4);
-  return nativeImage.createFromBitmap(buf, { width: size, height: size });
+  return resourcePath('icon.png');
 }
 
 function refreshTray() {
-  if (!tray) return;
-  const status = host.status();
-  tray.setToolTip(describeActive(host.activeTheme));
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: 'Open DeskForge', click: showStudio },
-      { type: 'separator' },
-      {
-        label: status.pauseReason === 'manual' ? 'Resume wallpaper' : 'Pause wallpaper',
-        enabled: status.running,
-        click: () => host.setManualPause(status.pauseReason !== 'manual'),
-      },
-      { label: 'Stop wallpaper', enabled: status.running, click: () => { host.stop(); void settings.set({ activeThemeId: null }); } },
-      { type: 'separator' },
-      { label: 'Quit', click: () => { quitting = true; app.quit(); } },
-    ]),
-  );
+  tray?.refresh(describeActive(host.activeTheme));
+}
+
+function broadcast(channel: string, payload?: unknown) {
+  for (const win of [studio, tray?.flyoutWindow ?? null]) {
+    if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+  }
+}
+
+function onSettingsChanged(next: Settings) {
+  applySettingsSideEffects(next);
+  host.setControls(controlsFromSettings(next));
+  broadcast(IPC.settingsChanged, next);
+  refreshTray();
+}
+
+function stopWallpaper() {
+  host.stop();
+  void settings.set({ activeThemeId: null });
+}
+
+function quitApp() {
+  quitting = true;
+  app.quit();
 }
 
 function applySettingsSideEffects(s: Settings) {
@@ -150,14 +149,36 @@ app.whenReady().then(async () => {
   await store.init();
   const s = await settings.load();
   handleThemeProtocol(store);
+  await settings.set({ launchCount: s.launchCount + 1 });
   host = new WallpaperHost(platform);
-  host.onStatus(refreshTray);
+  host.setControls(controlsFromSettings(s));
+  host.onStatus((status) => {
+    refreshTray();
+    broadcast(IPC.desktopStatusChanged, status);
+  });
 
-  registerIpc({ store, settings, platform, host, importPackage: importFromFile, studioWindow: () => studio, applySettingsSideEffects });
+  registerIpc({
+    store,
+    settings,
+    platform,
+    host,
+    importPackage: importFromFile,
+    studioWindow: () => studio,
+    applySettingsSideEffects,
+    broadcast,
+  });
 
-  tray = new Tray(trayIcon());
-  tray.on('click', showStudio);
+  tray = new TrayController(host, settings, { showStudio, quit: quitApp, stopWallpaper });
+  tray.onSettingsChangedFromTray(onSettingsChanged);
+  tray.create();
   refreshTray();
+
+  ipcMain.on(IPC.appShowStudio, () => {
+    tray?.hideFlyout();
+    showStudio();
+  });
+  ipcMain.on(IPC.appHideFlyout, () => tray?.hideFlyout());
+  ipcMain.on(IPC.appQuit, quitApp);
 
   if (s.activeThemeId) {
     try {
@@ -193,4 +214,5 @@ app.on('before-quit', async (e) => {
   }
   host?.stop();
   platform.dispose();
+  tray?.destroy();
 });

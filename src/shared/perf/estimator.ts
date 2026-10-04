@@ -118,7 +118,7 @@ export function estimateLayer(layer: Layer, theme: Theme, display: DisplayInfo):
       const decodeLoad = pxPerSec / ref;
       const bitrateMbps = asset?.durationSec && asset.bytes ? (asset.bytes * 8) / asset.durationSec / 1_000_000 : 8;
       return {
-        cpu: 0.8 + decodeLoad * 1.6 + bitrateMbps * 0.04,
+        cpu: 0.8 + decodeLoad * 1.6 + bitrateMbps * 0.04 + (layer.sound ? 0.2 : 0),
         gpu: (decodeLoad * 3.5 + composite * 2) * blendPenalty,
         ram: 60 + (w * h * 1.5 * 4) / MB,
         vram: (w * h * 1.5 * 8) / MB + (screenPx * 4 * display.count) / MB,
@@ -152,6 +152,12 @@ export function estimateLayer(layer: Layer, theme: Theme, display: DisplayInfo):
 
     case 'text':
       return { cpu: 0, gpu: 0.02, ram: 0.5, vram: 1 };
+
+    case 'audio': {
+      const asset = theme.assets[layer.asset];
+      const mb = (asset?.bytes ?? 5_000_000) / MB;
+      return { cpu: 0.25, gpu: 0, ram: 12 + Math.min(mb, 40) * 0.5, vram: 0 };
+    }
   }
 }
 

@@ -2,7 +2,8 @@ import { forwardRef, useEffect, useMemo, useRef, useState, type CSSProperties } 
 import { readableOn, shade } from '../../shared/color';
 import type { Theme } from '../../shared/theme/schema';
 import { assetResolver } from '../app/store';
-import { Stage } from '../engine/Stage';
+import { Stage, type StageControls } from '../engine/Stage';
+import { Icon, type IconName } from './Icon';
 
 interface Props {
   theme: Theme;
@@ -12,12 +13,14 @@ interface Props {
   chrome?: boolean;
   highlightLayerId?: string | null;
   className?: string;
+  sound?: boolean;
+  controls?: StageControls;
 }
 
-const ICONS = ['🗑️', '📁', '🎮', '🌐', '📝', '🎵'];
+const ICONS: IconName[] = ['trash', 'folder', 'gamepad', 'globe', 'file-text', 'music'];
 
 export const DesktopPreview = forwardRef<HTMLDivElement, Props>(function DesktopPreview(
-  { theme, displayWidth, aspect = 16 / 9, paused, chrome = true, highlightLayerId, className },
+  { theme, displayWidth, aspect = 16 / 9, paused, chrome = true, highlightLayerId, className, sound = false, controls },
   ref,
 ) {
   const cursor = useRef<{ x: number; y: number } | null>(null);
@@ -81,7 +84,17 @@ export const DesktopPreview = forwardRef<HTMLDivElement, Props>(function Desktop
       }}
       onMouseLeave={() => (cursor.current = null)}
     >
-      <Stage theme={theme} assetUrl={assetUrl} paused={paused} scale={scale} cursor={cursor} highlightLayerId={highlightLayerId} style={{ position: 'absolute', inset: 0 }} />
+      <Stage
+        theme={theme}
+        assetUrl={assetUrl}
+        paused={paused}
+        scale={scale}
+        cursor={cursor}
+        highlightLayerId={highlightLayerId}
+        sound={sound}
+        controls={controls}
+        style={{ position: 'absolute', inset: 0 }}
+      />
 
       {chrome && desktop.showIcons && (
         <div
@@ -93,8 +106,8 @@ export const DesktopPreview = forwardRef<HTMLDivElement, Props>(function Desktop
           }}
         >
           {ICONS.slice(0, 4).map((icon) => (
-            <div key={icon} style={{ fontSize: iconPx * 0.8, width: iconPx * 1.4, textAlign: 'center' }}>
-              {icon}
+            <div key={icon} style={{ width: iconPx * 1.4, display: 'grid', placeItems: 'center', color: '#fff' }}>
+              <Icon name={icon} size={Math.max(6, iconPx * 0.75)} strokeWidth={1.6} />
             </div>
           ))}
         </div>
@@ -116,7 +129,10 @@ export const DesktopPreview = forwardRef<HTMLDivElement, Props>(function Desktop
         >
           <div className="preview-caption" style={{ background: caption, color: captionText, height: 30 * scale, fontSize: 11 * scale, padding: `0 ${10 * scale}px` }}>
             <span>DeskForge</span>
-            <span style={{ letterSpacing: 10 * scale }}>— ▢ ✕</span>
+            <span style={{ display: 'flex', gap: 8 * scale }}>
+              <Icon name="square" size={Math.max(5, 9 * scale)} />
+              <Icon name="x" size={Math.max(5, 9 * scale)} />
+            </span>
           </div>
           <div style={{ padding: 14 * scale, display: 'grid', gap: 8 * scale }}>
             <div style={{ height: 10 * scale, width: '60%', borderRadius: 4 * scale, background: dark ? '#34343a' : '#e6e6e6' }} />
@@ -128,7 +144,9 @@ export const DesktopPreview = forwardRef<HTMLDivElement, Props>(function Desktop
 
       {chrome && (
         <div style={barStyle}>
-          <div style={{ width: tile, height: tile, borderRadius: 6 * scale, background: accent, display: 'grid', placeItems: 'center', fontSize: tile * 0.5, color: readableOn(accent) }}>⊞</div>
+          <div style={{ width: tile, height: tile, borderRadius: 6 * scale, background: accent, display: 'grid', placeItems: 'center', color: readableOn(accent) }}>
+            <Icon name="layout-grid" size={Math.max(5, tile * 0.55)} />
+          </div>
           {ICONS.map((icon, i) => (
             <div
               key={icon}
@@ -143,7 +161,7 @@ export const DesktopPreview = forwardRef<HTMLDivElement, Props>(function Desktop
                 borderBottom: i === 2 ? `${2 * scale}px solid ${accent}` : undefined,
               }}
             >
-              {icon}
+              <Icon name={icon} size={Math.max(5, tile * 0.55)} strokeWidth={1.6} style={{ color: dark ? '#e8eaf1' : '#202024' }} />
             </div>
           ))}
         </div>

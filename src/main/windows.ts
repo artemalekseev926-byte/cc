@@ -3,7 +3,7 @@ import { BrowserWindow, type BrowserWindowConstructorOptions } from 'electron';
 
 export const PRELOAD = join(__dirname, '../preload/preload.cjs');
 
-export function loadPage(win: BrowserWindow, page: 'index' | 'wallpaper', query: Record<string, string> = {}): Promise<void> {
+export function loadPage(win: BrowserWindow, page: 'index' | 'wallpaper' | 'tray', query: Record<string, string> = {}): Promise<void> {
   const devUrl = process.env.DESKFORGE_DEV_URL;
   if (devUrl) {
     const url = new URL(`${page}.html`, devUrl);

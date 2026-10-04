@@ -3,17 +3,23 @@ import type { LayerCost } from '../../shared/perf/estimator';
 import { newId } from '../../shared/theme/factory';
 import { useT } from '../app/i18n';
 import { useEditingTheme, useStudio } from '../app/store';
+import { Icon, type IconName } from '../components/Icon';
 
-export const LAYER_ICONS: Record<Layer['type'], string> = {
-  solid: '⬛',
-  gradient: '🌈',
-  image: '🖼️',
-  video: '🎬',
-  particles: '❄️',
-  shader: '🌌',
-  clock: '⏰',
-  text: '🔤',
+export const LAYER_ICONS: Record<Layer['type'], IconName> = {
+  solid: 'square',
+  gradient: 'rainbow',
+  image: 'image',
+  video: 'clapperboard',
+  audio: 'music',
+  particles: 'snowflake',
+  shader: 'wand',
+  clock: 'clock',
+  text: 'type',
 };
+
+export function LayerIcon({ type, size = 16 }: { type: Layer['type']; size?: number }) {
+  return <Icon name={LAYER_ICONS[type]} size={size} className="layer-icon" />;
+}
 
 export function LayerList({ costs }: { costs: LayerCost[] }) {
   const t = useT();
@@ -71,9 +77,9 @@ export function LayerList({ costs }: { costs: LayerCost[] }) {
                 updateLayer(layer.id, { visible: !layer.visible });
               }}
             >
-              {layer.visible ? '👁' : '◌'}
+              <Icon name={layer.visible ? 'eye' : 'eye-off'} size={15} />
             </button>
-            <span className="layer-icon">{LAYER_ICONS[layer.type]}</span>
+            <LayerIcon type={layer.type} />
             <span className="layer-name" title={layer.name}>
               {layer.name}
             </span>
@@ -84,16 +90,16 @@ export function LayerList({ costs }: { costs: LayerCost[] }) {
             )}
             <span className="layer-buttons">
               <button type="button" className="icon-btn" title={t('editor.moveUp')} disabled={index === n - 1} onClick={(e) => (e.stopPropagation(), move(layer.id, 1))}>
-                ↑
+                <Icon name="arrow-up" size={14} />
               </button>
               <button type="button" className="icon-btn" title={t('editor.moveDown')} disabled={index === 0} onClick={(e) => (e.stopPropagation(), move(layer.id, -1))}>
-                ↓
+                <Icon name="arrow-down" size={14} />
               </button>
               <button type="button" className="icon-btn" title={t('editor.duplicateLayer')} disabled={n >= 16} onClick={(e) => (e.stopPropagation(), duplicate(layer))}>
-                ⧉
+                <Icon name="copy" size={14} />
               </button>
               <button type="button" className="icon-btn danger" title={t('editor.deleteLayer')} onClick={(e) => (e.stopPropagation(), remove(layer.id))}>
-                🗑
+                <Icon name="trash" size={14} />
               </button>
             </span>
           </div>
