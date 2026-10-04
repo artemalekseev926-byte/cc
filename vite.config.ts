@@ -1,7 +1,10 @@
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
+
+const root = dirname(fileURLToPath(import.meta.url));
 
 const stripCspInDev: Plugin = {
   name: 'strip-csp-in-dev',
@@ -10,17 +13,17 @@ const stripCspInDev: Plugin = {
 };
 
 export default defineConfig({
-  root: resolve(__dirname, 'src/renderer'),
+  root: resolve(root, 'src/renderer'),
   base: './',
   plugins: [react(), stripCspInDev],
-  server: { port: 5183, strictPort: true },
+  server: { host: '127.0.0.1', port: 5183, strictPort: true },
   build: {
-    outDir: resolve(__dirname, 'dist/renderer'),
+    outDir: resolve(root, 'dist/renderer'),
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        index: resolve(__dirname, 'src/renderer/index.html'),
-        wallpaper: resolve(__dirname, 'src/renderer/wallpaper.html'),
+        index: resolve(root, 'src/renderer/index.html'),
+        wallpaper: resolve(root, 'src/renderer/wallpaper.html'),
       },
     },
   },

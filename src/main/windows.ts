@@ -8,7 +8,7 @@ export function loadPage(win: BrowserWindow, page: 'index' | 'wallpaper', query:
   if (devUrl) {
     const url = new URL(`${page}.html`, devUrl);
     for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
-    return win.loadURL(url.toString());
+    return loadWithRetry(win, url.toString());
   }
   return win.loadFile(join(__dirname, `../renderer/${page}.html`), { query });
 }
@@ -35,4 +35,16 @@ export function createWallpaperWindow(extra: BrowserWindowConstructorOptions = {
     },
     ...extra,
   });
+}
+
+async function loadWithRetry(win: BrowserWindow, url: string, attempts = 20): Promise<void> {
+  for (let i = 1; ; i++) {
+    try {
+      await win.loadURL(url);
+      return;
+    } catch (err) {
+      if (i >= attempts || win.isDestroyed()) throw err;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
 }

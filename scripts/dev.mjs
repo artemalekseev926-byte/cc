@@ -3,7 +3,7 @@ import { createServer } from 'vite';
 
 const server = await createServer({ configFile: 'vite.config.ts' });
 await server.listen();
-const url = server.resolvedUrls?.local?.[0] ?? 'http://localhost:5183/';
+const url = 'http://127.0.0.1:5183/';
 
 const esbuild = spawn(process.execPath, ['scripts/build-main.mjs', '--watch'], { stdio: 'inherit' });
 await new Promise((r) => setTimeout(r, 1500));
