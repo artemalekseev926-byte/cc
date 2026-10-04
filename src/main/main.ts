@@ -53,6 +53,7 @@ function createStudio(show: boolean): BrowserWindow {
     minHeight: 700,
     show: false,
     title: 'DeskForge',
+    icon: appIconPath(),
     backgroundColor: '#0f1117',
     autoHideMenuBar: true,
     webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true },
@@ -89,7 +90,13 @@ function showStudio() {
   }
 }
 
+function appIconPath(): string {
+  return app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(app.getAppPath(), 'build', 'icon.png');
+}
+
 function trayIcon() {
+  const image = nativeImage.createFromPath(appIconPath());
+  if (!image.isEmpty()) return image.resize({ width: 16, height: 16, quality: 'best' });
   const size = 16;
   const buf = Buffer.alloc(size * size * 4);
   for (let i = 0; i < size * size; i++) buf.set([0xff, 0x5c, 0x6c, 0xff], i * 4);
@@ -125,6 +132,11 @@ function applySettingsSideEffects(s: Settings) {
 app.on('second-instance', showStudio);
 
 app.whenReady().then(async () => {
+  if (app.isPackaged && steam.restartThroughSteamIfNeeded()) {
+    quitting = true;
+    app.quit();
+    return;
+  }
   await store.init();
   const s = await settings.load();
   handleThemeProtocol(store);

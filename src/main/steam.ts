@@ -20,6 +20,16 @@ export class SteamService {
 
   constructor(private readonly appId: number) {}
 
+  restartThroughSteamIfNeeded(): boolean {
+    if (this.appId === 480) return false;
+    try {
+      const require = createRequire(__filename);
+      return Boolean(require('steamworks.js').restartAppIfNecessary(this.appId));
+    } catch {
+      return false;
+    }
+  }
+
   init(): void {
     try {
       const require = createRequire(__filename);

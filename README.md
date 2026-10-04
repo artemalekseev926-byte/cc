@@ -68,18 +68,19 @@ npm test           # unit-тесты (vitest)
 npm run typecheck
 npm run build      # сборка renderer + main
 npm run dist:win   # release/win-unpacked — содержимое для SteamPipe
+npm run dist:zip   # то же + архив release/DeskForge-<версия>-win-x64.zip
 ```
 
 Интерфейс можно открыть и в обычном браузере (`npx vite`) — тогда вместо main-процесса работает встроенная заглушка API (удобно для вёрстки).
 
 ## Публикация в Steam
 
-1. Зарегистрируйте приложение в Steamworks, получите **App ID** и **Depot ID**.
-2. Укажите App ID в `package.json` → `deskforge.steamAppId` (сейчас `480` — тестовое приложение Valve «Spacewar»). Для локальной разработки положите `steam/steam_appid.txt` рядом с exe; в релиз этот файл не включается (см. `depot_build_win.vdf`).
-3. В Steamworks включите **Workshop** (UGC) для приложения и настройте теги — список тегов в приложении: `src/shared/workshop/validate.ts` (`WORKSHOP_TAGS`).
-4. Добавьте иконку `build/icon.ico` и пропишите её в `electron-builder.yml`.
-5. `npm run dist:win`, затем впишите ID в `steam/scripts/*.vdf` и загрузите сборку: `steamcmd +login <user> +run_app_build steam/scripts/app_build.vdf +quit`.
-6. В настройках запуска Steam укажите `DeskForge.exe`, для автозапуска приложение само передаёт `--hidden`.
+Подробный пошаговый гайд: **[docs/STEAM_GUIDE.md](docs/STEAM_GUIDE.md)**. Кратко:
+
+1. Зарегистрируйтесь в Steamworks, оплатите Steam Direct (100 $), создайте приложение и получите App ID.
+2. Настройте депо, параметры запуска (`DeskForge.exe`), Steam Cloud и Мастерскую (ISteamUGC) и опубликуйте настройки.
+3. Впишите App ID в `package.json` → `deskforge.steamAppId` и соберите: `npm run dist:win` (или скачайте сборку из GitHub Actions → «Build Windows»).
+4. Загрузите: `.\steam\upload.ps1 -AppId <AppID> -DepotId <DepotID> -SteamUser <логин>` и выставьте сборку на ветку `default` в SteamPipe → Builds.
 
 ## Ограничения и что дальше
 

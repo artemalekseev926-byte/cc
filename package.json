@@ -18,8 +18,9 @@
     "start": "npm run build && electron .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "dist:win": "npm run build && electron-builder --win dir",
-    "dist:linux": "npm run build && electron-builder --linux dir"
+    "dist:win": "npm run build && node scripts/ensure-win-natives.mjs && electron-builder --win dir",
+    "dist:linux": "npm run build && electron-builder --linux dir",
+    "dist:zip": "npm run dist:win && node scripts/zip-release.mjs"
   },
   "dependencies": {
     "koffi": "^3.3.2",

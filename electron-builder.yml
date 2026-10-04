@@ -9,8 +9,13 @@ files:
 asarUnpack:
   - node_modules/koffi/**
   - node_modules/steamworks.js/**
+extraResources:
+  - from: build/icon.png
+    to: icon.png
 win:
   target: dir
+  icon: build/icon.png
 linux:
   target: dir
+  icon: build/icon.png
   category: Utility
