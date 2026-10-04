@@ -15,6 +15,9 @@ export const LAYER_ICONS: Record<Layer['type'], IconName> = {
   shader: 'wand',
   clock: 'clock',
   text: 'type',
+  visualizer: 'audio',
+  web: 'globe',
+  sysinfo: 'cpu',
 };
 
 export function LayerIcon({ type, size = 16 }: { type: Layer['type']; size?: number }) {

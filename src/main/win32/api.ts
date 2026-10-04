@@ -16,6 +16,7 @@ export interface Win32 {
   GetWindowLongPtrW: Fn;
   GetClassNameW: (hwnd: number) => string;
   GetForegroundWindow: Fn;
+  IsZoomed: Fn;
   GetWindowRect: (hwnd: number) => Rect | null;
   GetMonitorRectForWindow: (hwnd: number) => Rect | null;
   SystemParametersInfoW: Fn;
@@ -96,6 +97,7 @@ function bind(): Win32 {
   const GetWindowLongPtrW = user32.func('intptr_t __stdcall GetWindowLongPtrW(intptr_t hwnd, int index)');
   const GetClassNameRaw = user32.func('int __stdcall GetClassNameW(intptr_t hwnd, void *buf, int max)');
   const GetForegroundWindow = user32.func('intptr_t __stdcall GetForegroundWindow()');
+  const IsZoomed = user32.func('bool __stdcall IsZoomed(intptr_t hwnd)');
   const GetWindowRectRaw = user32.func('bool __stdcall GetWindowRect(intptr_t hwnd, _Out_ DF_RECT *rect)');
   const MonitorFromWindow = user32.func('intptr_t __stdcall MonitorFromWindow(intptr_t hwnd, uint32_t flags)');
   const GetMonitorInfoW = user32.func('bool __stdcall GetMonitorInfoW(intptr_t monitor, _Inout_ DF_MONITORINFO *info)');
@@ -145,6 +147,7 @@ function bind(): Win32 {
       return n > 0 ? buf.toString('utf16le', 0, n * 2) : '';
     },
     GetForegroundWindow,
+    IsZoomed,
     GetWindowRect: (hwnd) => {
       const rect = {};
       return GetWindowRectRaw(hwnd, rect) ? (rect as Rect) : null;

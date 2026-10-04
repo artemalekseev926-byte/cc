@@ -1,6 +1,7 @@
 import { join } from 'node:path';
+import { cpus, freemem, totalmem } from 'node:os';
 import { app, BrowserWindow, dialog, ipcMain, screen, shell } from 'electron';
-import { IPC, controlsFromSettings, themeFileUrl, type Settings } from '../shared/ipc';
+import { IPC, controlsFromSettings, themeFileUrl, type Settings, type SysInfo } from '../shared/ipc';
 import { isValidTweakValue, type TweakId } from '../shared/system/tweaks';
 import { appsStatus, installApp, uninstallApp } from './apps';
 import { estimateTheme } from '../shared/perf/estimator';
@@ -11,6 +12,7 @@ import { probeTheme } from './perfProbe';
 import type { PlatformAdapter } from './platform';
 import type { SettingsStore } from './settings';
 import type { ThemeStore } from './storage';
+import type { PlaylistScheduler } from './playlist';
 import type { WallpaperHost } from './wallpaperHost';
 
 export interface Services {
@@ -22,6 +24,40 @@ export interface Services {
   broadcast: (channel: string, payload?: unknown) => void;
   studioWindow: () => BrowserWindow | null;
   applySettingsSideEffects: (s: Settings) => void;
+  playlist: PlaylistScheduler;
+}
+
+let lastCpu = cpuTimes();
+
+function cpuTimes() {
+  let idle = 0;
+  let total = 0;
+  for (const c of cpus()) {
+    idle += c.times.idle;
+    total += c.times.idle + c.times.user + c.times.nice + c.times.sys + c.times.irq;
+  }
+  return { idle, total };
+}
+
+let lastInfo: { at: number; info: SysInfo } | null = null;
+
+export function readSysInfo(): SysInfo {
+  if (lastInfo && Date.now() - lastInfo.at < 1500) return lastInfo.info;
+  const now = cpuTimes();
+  const dTotal = now.total - lastCpu.total;
+  const dIdle = now.idle - lastCpu.idle;
+  lastCpu = now;
+  const total = totalmem();
+  const used = total - freemem();
+  const gb = (b: number) => Math.round((b / 1024 ** 3) * 10) / 10;
+  const info = {
+    cpu: dTotal > 0 ? Math.round(Math.min(100, Math.max(0, (1 - dIdle / dTotal) * 100))) : 0,
+    ram: Math.round((used / total) * 100),
+    ramUsedGb: gb(used),
+    ramTotalGb: gb(total),
+  };
+  lastInfo = { at: Date.now(), info };
+  return info;
 }
 
 function requireTheme(input: unknown): Theme {
@@ -61,11 +97,13 @@ export function registerIpc(s: Services): void {
     const t = requireTheme(theme);
     await s.store.save(t);
     notifyLibrary();
-    if (s.host.activeTheme?.id === t.id) await s.host.show(t);
+    if (s.host.usesTheme(t.id)) await s.host.refreshTheme(t);
   });
   ipcMain.handle(IPC.themesRemove, async (_e, id: string) => {
-    if (s.host.activeTheme?.id === id) s.host.stop();
+    const wasActive = s.host.activeTheme?.id === id;
+    s.host.forgetTheme(String(id));
     await s.store.remove(String(id));
+    await s.settings.set({ monitorThemes: s.host.monitorThemes(), ...(wasActive ? { activeThemeId: null } : {}) });
     notifyLibrary();
   });
   ipcMain.handle(IPC.themesDuplicate, async (_e, id: string, name: string) => {
@@ -141,20 +179,36 @@ export function registerIpc(s: Services): void {
   ipcMain.handle(IPC.desktopApply, async (_e, themeId: string) => {
     const theme = await s.store.load(String(themeId));
     const result = await s.platform.applySystemTheme(theme, { allowExplorerRestart: s.settings.get().allowExplorerRestart });
-    if (s.platform.capabilities().liveWallpaper) await s.host.show(theme);
-    await s.settings.set({ activeThemeId: theme.id });
+    if (s.platform.capabilities().liveWallpaper) {
+      s.host.setOverrides(new Map());
+      await s.host.show(theme);
+    }
+    s.playlist.noteManualSwitch();
+    await s.settings.set({ activeThemeId: theme.id, monitorThemes: {} });
     return result;
+  });
+  ipcMain.handle(IPC.desktopApplyOn, async (_e, themeId: string, displayId: unknown) => {
+    const id = typeof displayId === 'number' && Number.isFinite(displayId) ? displayId : null;
+    const theme = await s.store.load(String(themeId));
+    if (id === null || !screen.getAllDisplays().some((d) => d.id === id)) {
+      s.host.setOverrides(new Map());
+      await s.host.show(theme);
+    } else {
+      await s.host.showOn(id, theme);
+    }
+    s.playlist.noteManualSwitch();
+    await s.settings.set({ activeThemeId: s.host.activeTheme?.id ?? null, monitorThemes: s.host.monitorThemes() });
   });
   ipcMain.handle(IPC.desktopPreviewLive, async (_e, theme: unknown, seconds: number) => {
     await s.host.preview(requireTheme(theme), Math.max(3, Math.min(60, Number(seconds) || 10)));
   });
   ipcMain.handle(IPC.desktopStop, async () => {
     s.host.stop();
-    await s.settings.set({ activeThemeId: null });
+    await s.settings.set({ activeThemeId: null, monitorThemes: {} });
   });
   ipcMain.handle(IPC.desktopRestore, async () => {
     s.host.stop();
-    await s.settings.set({ activeThemeId: null });
+    await s.settings.set({ activeThemeId: null, monitorThemes: {} });
     return s.platform.restoreOriginal();
   });
   ipcMain.handle(IPC.desktopStatus, () => s.host.status());
@@ -166,6 +220,7 @@ export function registerIpc(s: Services): void {
     return s.platform.setTweak(id as TweakId, value);
   });
   ipcMain.handle(IPC.systemRestartExplorer, () => s.platform.restartExplorer());
+  ipcMain.handle(IPC.systemSysinfo, () => readSysInfo());
   ipcMain.handle(IPC.appsStatus, () => appsStatus());
   ipcMain.handle(IPC.appsInstall, (_e, id: string) => installApp(String(id)));
   ipcMain.handle(IPC.appsUninstall, (_e, id: string) => uninstallApp(String(id)));

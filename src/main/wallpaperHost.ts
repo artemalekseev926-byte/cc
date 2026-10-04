@@ -24,7 +24,9 @@ export class WallpaperHost {
   private previewTimer: NodeJS.Timeout | null = null;
   private themeBeforePreview: Theme | null = null;
   private statusListeners: Array<(s: DesktopStatus) => void> = [];
-  private controls: WallpaperControls = { volume: 0.7, muted: false, saturation: 1, speed: 1 };
+  private controls: WallpaperControls = { volume: 0.7, muted: false, saturation: 1, speed: 1, brightness: 1, contrast: 1, hue: 0, fpsCap: 0 };
+  private overrides = new Map<number, Theme>();
+  private pauseWhenMaximized = true;
 
   constructor(private readonly platform: PlatformAdapter) {
     platform.onShellRestart(() => this.reattach());
@@ -35,7 +37,7 @@ export class WallpaperHost {
       const surface = this.surfaces.find((s) => s.win.webContents.id === event.sender.id);
       if (!surface) return;
       surface.ready = true;
-      surface.win.webContents.send(IPC.wallpaperTheme, this.theme);
+      surface.win.webContents.send(IPC.wallpaperTheme, this.themeFor(surface.displayId));
       surface.win.webContents.send(IPC.wallpaperPause, this.paused);
       surface.win.webContents.send(IPC.wallpaperControls, this.controls);
     });
@@ -46,12 +48,76 @@ export class WallpaperHost {
     this.broadcast(IPC.wallpaperControls, controls);
   }
 
+  setPauseWhenMaximized(on: boolean): void {
+    this.pauseWhenMaximized = on;
+    this.evaluatePause();
+  }
+
   get activeTheme(): Theme | null {
     return this.theme;
   }
 
+  usesTheme(id: string): boolean {
+    return this.theme?.id === id || [...this.overrides.values()].some((t) => t.id === id);
+  }
+
+  async refreshTheme(theme: Theme): Promise<void> {
+    for (const [displayId, t] of this.overrides) if (t.id === theme.id) this.overrides.set(displayId, theme);
+    if (this.theme?.id === theme.id) this.theme = theme;
+    this.pushThemes();
+    this.startLoops();
+  }
+
+  forgetTheme(id: string): void {
+    for (const [displayId, t] of [...this.overrides]) if (t.id === id) this.overrides.delete(displayId);
+    if (this.theme?.id === id) this.stop();
+    else this.pushThemes();
+  }
+
+  private themeFor(displayId: number): Theme | null {
+    return this.overrides.get(displayId) ?? this.theme;
+  }
+
+  private pushThemes() {
+    for (const s of this.surfaces) if (s.ready && !s.win.isDestroyed()) s.win.webContents.send(IPC.wallpaperTheme, this.themeFor(s.displayId));
+  }
+
+  private allThemes(): Theme[] {
+    const live = new Set(screen.getAllDisplays().map((d) => d.id));
+    return [this.theme, ...[...this.overrides].filter(([id]) => live.has(id)).map(([, t]) => t)].filter((t): t is Theme => t !== null);
+  }
+
+  monitorThemes(): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const [id, t] of this.overrides) out[String(id)] = t.id;
+    return out;
+  }
+
+  async showOn(displayId: number, theme: Theme | null): Promise<void> {
+    if (theme) this.overrides.set(displayId, theme);
+    else this.overrides.delete(displayId);
+    if (!this.theme && theme) {
+      await this.show(theme);
+      return;
+    }
+    this.pushThemes();
+    this.startLoops();
+    this.emitStatus();
+  }
+
+  setOverrides(overrides: Map<number, Theme>): void {
+    this.overrides = overrides;
+    this.pushThemes();
+  }
+
   status(): DesktopStatus {
-    return { activeThemeId: this.theme?.id ?? null, running: this.surfaces.length > 0, paused: this.paused, pauseReason: this.pauseReason };
+    return {
+      activeThemeId: this.theme?.id ?? null,
+      running: this.surfaces.length > 0,
+      paused: this.paused,
+      pauseReason: this.pauseReason,
+      monitorThemes: this.monitorThemes(),
+    };
   }
 
   onStatus(cb: (s: DesktopStatus) => void): void {
@@ -67,7 +133,7 @@ export class WallpaperHost {
     this.cancelPreview();
     this.theme = theme;
     if (this.surfaces.length === 0) await this.rebuild();
-    else this.broadcast(IPC.wallpaperTheme, theme);
+    else this.pushThemes();
     this.startLoops();
     this.emitStatus();
   }
@@ -98,6 +164,7 @@ export class WallpaperHost {
   stop(): void {
     this.cancelPreview();
     this.theme = null;
+    this.overrides.clear();
     this.stopLoops();
     for (const s of this.surfaces) if (!s.win.isDestroyed()) s.win.destroy();
     this.surfaces = [];
@@ -165,9 +232,9 @@ export class WallpaperHost {
   private startLoops() {
     if (!this.monitorTimer) this.monitorTimer = setInterval(() => this.evaluatePause(), MONITOR_INTERVAL_MS);
     this.evaluatePause();
-    const needsCursor = this.theme?.wallpaper.layers.some(
+    const needsCursor = this.allThemes().some((t) => t.wallpaper.layers.some(
       (l) => l.visible && ((l.type === 'image' && l.parallax > 0) || (l.type === 'particles' && l.interactive)),
-    );
+    ));
     if (needsCursor && !this.cursorTimer) this.cursorTimer = setInterval(() => this.sendCursor(), CURSOR_INTERVAL_MS);
     if (!needsCursor && this.cursorTimer) {
       clearInterval(this.cursorTimer);
@@ -198,11 +265,12 @@ export class WallpaperHost {
   }
 
   private evaluatePause() {
-    const theme = this.theme;
+    const themes = this.allThemes();
     let reason: DesktopStatus['pauseReason'] = null;
     if (this.manualPause) reason = 'manual';
-    else if (theme?.wallpaper.pauseOnFullscreen && this.platform.isForegroundFullscreen()) reason = 'fullscreen';
-    else if (theme?.wallpaper.pauseOnBattery && powerMonitor.isOnBatteryPower()) reason = 'battery';
+    else if (themes.some((t) => t.wallpaper.pauseOnFullscreen) && this.platform.isForegroundFullscreen()) reason = 'fullscreen';
+    else if (this.pauseWhenMaximized && themes.length > 0 && this.platform.isForegroundMaximized()) reason = 'maximized';
+    else if (themes.some((t) => t.wallpaper.pauseOnBattery) && powerMonitor.isOnBatteryPower()) reason = 'battery';
     const paused = reason !== null;
     if (paused !== this.paused || reason !== this.pauseReason) {
       this.paused = paused;

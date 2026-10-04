@@ -1,3 +1,4 @@
+import { FPS_CAPS } from '../../shared/ipc';
 import { api, isDesktopApp } from '../app/api';
 import { useT } from '../app/i18n';
 import { useStudio } from '../app/store';
@@ -82,6 +83,34 @@ export function SettingsPage() {
         <Field label={t('tray.speed')} hint={t('settings.speedHint')}>
           <Slider value={settings.wallpaperSpeed} min={0.25} max={2} step={0.05} format={(v) => `${v.toFixed(2)}×`} onChange={(v) => void updateSettings({ wallpaperSpeed: v })} />
         </Field>
+        <Field label={t('settings.brightness')}>
+          <Slider value={settings.wallpaperBrightness} min={0.3} max={1.5} step={0.05} format={(v) => `${Math.round(v * 100)}%`} onChange={(v) => void updateSettings({ wallpaperBrightness: v })} />
+        </Field>
+        <Field label={t('settings.contrast')}>
+          <Slider value={settings.wallpaperContrast} min={0.5} max={1.5} step={0.05} format={(v) => `${Math.round(v * 100)}%`} onChange={(v) => void updateSettings({ wallpaperContrast: v })} />
+        </Field>
+        <Field label={t('settings.hue')} hint={t('settings.hueHint')}>
+          <Slider value={settings.wallpaperHue} min={-180} max={180} step={5} format={(v) => (v === 0 ? t('common.off') : `${v > 0 ? '+' : ''}${v}°`)} onChange={(v) => void updateSettings({ wallpaperHue: v })} />
+        </Field>
+        <Field label={t('settings.fpsCap')} hint={t('settings.fpsCapHint')}>
+          <Segmented<string>
+            value={String(settings.wallpaperFpsCap)}
+            onChange={(v) => void updateSettings({ wallpaperFpsCap: Number(v) })}
+            options={FPS_CAPS.map((n) => ({ value: String(n), label: n === 0 ? t('settings.fpsCapTheme') : String(n) }))}
+          />
+        </Field>
+        <Field label={t('settings.pauseMaximized')} hint={t('settings.pauseMaximizedHint')}>
+          <Toggle checked={settings.pauseWhenMaximized} onChange={(v) => void updateSettings({ pauseWhenMaximized: v })} />
+        </Field>
+        <div>
+          <Button
+            size="sm"
+            icon="restore"
+            onClick={() => void updateSettings({ wallpaperBrightness: 1, wallpaperContrast: 1, wallpaperHue: 0, wallpaperSaturation: 1, wallpaperSpeed: 1 })}
+          >
+            {t('tray.reset')}
+          </Button>
+        </div>
         <Tip>{t('settings.trayTip')}</Tip>
       </div>
       <div className="card pad stack">

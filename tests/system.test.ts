@@ -87,6 +87,6 @@ describe('settings', () => {
       expect(v).toBeGreaterThanOrEqual(range![0]);
       expect(v).toBeLessThanOrEqual(range![1]);
     }
-    expect(controlsFromSettings(DEFAULT_SETTINGS)).toEqual({ volume: 0.7, muted: false, saturation: 1, speed: 1 });
+    expect(controlsFromSettings(DEFAULT_SETTINGS)).toEqual({ volume: 0.7, muted: false, saturation: 1, speed: 1, brightness: 1, contrast: 1, hue: 0, fpsCap: 0 });
   });
 });

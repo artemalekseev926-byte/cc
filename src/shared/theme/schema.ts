@@ -39,6 +39,7 @@ export const ImageLayerSchema = z.object({
   parallax: unit.default(0),
   blur: z.number().min(0).max(40).default(0),
   slowZoom: z.boolean().default(false),
+  beatPulse: unit.default(0),
 });
 
 export const VideoLayerSchema = z.object({
@@ -105,6 +106,49 @@ export const TextLayerSchema = z.object({
   font: z.enum(['system', 'serif', 'mono', 'rounded']).default('system'),
 });
 
+export const VisualizerLayerSchema = z.object({
+  ...layerBase,
+  type: z.literal('visualizer'),
+  style: z.enum(['bars', 'wave', 'circle']).default('bars'),
+  position: z.enum(['bottom', 'center', 'top']).default('bottom'),
+  bands: z.number().int().min(16).max(128).default(64),
+  height: z.number().min(0.05).max(1).default(0.3),
+  sensitivity: z.number().min(0.2).max(4).default(1.2),
+  smoothing: z.number().min(0).max(0.95).default(0.7),
+  mirror: z.boolean().default(true),
+  colorA: hexColor.default('#7c6cff'),
+  colorB: hexColor.default('#00e0ff'),
+});
+
+export function isHttpsUrl(v: string): boolean {
+  if (v.length > 2000) return false;
+  try {
+    return new URL(v).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+const httpsUrl = z.string().max(2000).refine(isHttpsUrl, 'Expected an https:// URL');
+
+export const WebLayerSchema = z.object({
+  ...layerBase,
+  type: z.literal('web'),
+  url: httpsUrl,
+  zoom: z.number().min(0.25).max(3).default(1),
+});
+
+export const SysInfoLayerSchema = z.object({
+  ...layerBase,
+  type: z.literal('sysinfo'),
+  showCpu: z.boolean().default(true),
+  showRam: z.boolean().default(true),
+  style: z.enum(['text', 'bars']).default('bars'),
+  position: WidgetPositionSchema.default('top-right'),
+  color: hexColor.default('#ffffff'),
+  fontSize: z.number().min(10).max(64).default(18),
+});
+
 export const LayerSchema = z.discriminatedUnion('type', [
   SolidLayerSchema,
   GradientLayerSchema,
@@ -115,6 +159,9 @@ export const LayerSchema = z.discriminatedUnion('type', [
   ClockLayerSchema,
   TextLayerSchema,
   AudioLayerSchema,
+  VisualizerLayerSchema,
+  WebLayerSchema,
+  SysInfoLayerSchema,
 ]);
 
 export const AssetSchema = z.object({
@@ -196,6 +243,9 @@ export type ShaderPreset = z.infer<typeof ShaderPresetSchema>;
 export type ClockLayer = z.infer<typeof ClockLayerSchema>;
 export type TextLayer = z.infer<typeof TextLayerSchema>;
 export type AudioLayer = z.infer<typeof AudioLayerSchema>;
+export type VisualizerLayer = z.infer<typeof VisualizerLayerSchema>;
+export type WebLayer = z.infer<typeof WebLayerSchema>;
+export type SysInfoLayer = z.infer<typeof SysInfoLayerSchema>;
 export type WidgetPosition = z.infer<typeof WidgetPositionSchema>;
 export type Asset = z.infer<typeof AssetSchema>;
 export type Wallpaper = z.infer<typeof WallpaperSchema>;

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { createEmptyTheme } from '../../shared/theme/factory';
 import { PRESETS } from '../../shared/theme/presets';
 import { slugify } from '../../shared/theme/schema';
-import type { ApplyResult, ThemeSummary } from '../../shared/ipc';
+import { PLAYLIST_INTERVALS, type ApplyResult, type Playlist, type ThemeSummary } from '../../shared/ipc';
 import { estimateTheme } from '../../shared/perf/estimator';
 import { api, isDesktopApp } from '../app/api';
 import { useT, type TFunction } from '../app/i18n';
@@ -10,7 +10,7 @@ import { usePrimaryDisplay, useStudio } from '../app/store';
 import { DesktopPreview } from '../components/DesktopPreview';
 import { RatingBadge } from '../components/PerfMeter';
 import { Icon } from '../components/Icon';
-import { Button, Empty, Modal, Segmented, Tip } from '../components/ui';
+import { Button, Empty, Field, Modal, Segmented, Tip, Toggle } from '../components/ui';
 
 type Filter = 'all' | 'local' | 'builtin';
 
@@ -32,6 +32,14 @@ export function useThemeActions() {
       try {
         const result = await api.desktop.apply(id);
         toast(result.ok ? 'success' : 'error', summarizeApply(result, t));
+      } catch (err) {
+        toast('error', String(err));
+      }
+    },
+    async applyOn(id: string, displayId: number, index: number) {
+      try {
+        await api.desktop.applyOn(id, displayId);
+        toast('success', t('library.appliedOnMonitor', { n: index }));
       } catch (err) {
         toast('error', String(err));
       }
@@ -77,6 +85,8 @@ export function Library() {
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
+  const [playlistOpen, setPlaylistOpen] = useState(false);
+  const playlistOn = settings?.playlist.enabled ?? false;
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -100,6 +110,9 @@ export function Library() {
               {t('library.stopWallpaper')}
             </Button>
           )}
+          <Button icon="playlist" variant={playlistOn ? 'primary' : undefined} onClick={() => setPlaylistOpen(true)}>
+            {playlistOn ? t('playlist.on') : t('playlist.title')}
+          </Button>
           <Button variant="primary" size="lg" icon="plus" onClick={() => setCreating(true)}>
             {t('library.create')}
           </Button>
@@ -130,12 +143,18 @@ export function Library() {
       ) : (
         <div className="grid">
           {shown.map((s) => (
-            <ThemeCard key={s.id} summary={s} active={desktop.activeThemeId === s.id} displayWidth={display.width} />
+            <ThemeCard
+              key={s.id}
+              summary={s}
+              active={desktop.activeThemeId === s.id || Object.values(desktop.monitorThemes).includes(s.id)}
+              displayWidth={display.width}
+            />
           ))}
         </div>
       )}
 
       {creating && <NewThemeDialog onClose={() => setCreating(false)} />}
+      {playlistOpen && <PlaylistDialog onClose={() => setPlaylistOpen(false)} />}
     </div>
   );
 }
@@ -143,6 +162,7 @@ export function Library() {
 function ThemeCard({ summary, active, displayWidth }: { summary: ThemeSummary; active: boolean; displayWidth: number }) {
   const t = useT();
   const actions = useThemeActions();
+  const displays = useStudio((s) => s.displays);
   const [hover, setHover] = useState(false);
   const estimate = useMemo(() => estimateTheme(summary.theme), [summary.theme]);
   return (
@@ -176,11 +196,18 @@ function ThemeCard({ summary, active, displayWidth }: { summary: ThemeSummary; a
           <Button variant="ghost" icon="more" title={t('library.more')}>
           </Button>
           <div className="menu-items">
+            {displays.length > 1 &&
+              displays.map((d, i) => (
+                <button type="button" key={d.id} onClick={() => void actions.applyOn(summary.id, d.id, i + 1)}>
+                  <Icon name="monitor" size={15} /> {t('library.applyOnMonitor', { n: i + 1 })}
+                  {d.primary ? ` (${t('library.primaryMonitor')})` : ''}
+                </button>
+              ))}
             <button type="button" onClick={() => actions.perf(summary.id)}>
               <Icon name="gauge" size={15} /> {t('library.testPerf')}
             </button>
             <button type="button" onClick={() => void actions.duplicate(summary)}>
-              ⧉ {t('library.duplicate')}
+              <Icon name="copy" size={15} /> {t('library.duplicate')}
             </button>
             {summary.source === 'local' && (
               <>
@@ -270,6 +297,138 @@ export function NewThemeDialog({ onClose }: { onClose: () => void }) {
           </div>
         </>
       )}
+    </Modal>
+  );
+}
+
+function PlaylistDialog({ onClose }: { onClose: () => void }) {
+  const t = useT();
+  const { settings, updateSettings, library, desktop, toast } = useStudio();
+  const [draft, setDraft] = useState<Playlist>(() => {
+    const p = settings!.playlist;
+    const known = new Set(library.map((x) => x.id));
+    return { ...p, themeIds: p.themeIds.filter((id) => known.has(id)) };
+  });
+  const patch = (p: Partial<Playlist>) => setDraft((d) => ({ ...d, ...p }));
+  const toggleTheme = (id: string) =>
+    patch({ themeIds: draft.themeIds.includes(id) ? draft.themeIds.filter((x) => x !== id) : [...draft.themeIds, id] });
+  const hours = Array.from({ length: 24 }, (_, h) => h);
+  const nameOf = (id: string | null) => library.find((s) => s.id === id)?.name ?? '';
+  const ready = draft.mode === 'interval' ? draft.themeIds.length >= 2 : Boolean(draft.dayThemeId && draft.nightThemeId);
+
+  const save = async () => {
+    const next = { ...draft, enabled: draft.enabled && ready };
+    await updateSettings({ playlist: next });
+    if (next.enabled && !desktop.running) {
+      const first = next.mode === 'interval' ? next.themeIds[0] : next.dayThemeId;
+      if (first) await api.desktop.applyOn(first, null);
+    }
+    toast('success', next.enabled ? t('playlist.saved') : t('playlist.disabled'));
+    onClose();
+  };
+
+  return (
+    <Modal title={t('playlist.title')} onClose={onClose} wide>
+      <div className="stack">
+        <p className="muted">{t('playlist.desc')}</p>
+        <Field label={t('playlist.enabled')}>
+          <Toggle checked={draft.enabled} onChange={(v) => patch({ enabled: v })} />
+        </Field>
+        <Field label={t('playlist.mode')}>
+          <Segmented<Playlist['mode']>
+            value={draft.mode}
+            onChange={(v) => patch({ mode: v })}
+            options={[
+              { value: 'interval', label: t('playlist.mode.interval') },
+              { value: 'dayNight', label: t('playlist.mode.dayNight') },
+            ]}
+          />
+        </Field>
+        {draft.mode === 'interval' ? (
+          <>
+            <Field label={t('playlist.every')}>
+              <Segmented<string>
+                value={String(draft.intervalMinutes)}
+                onChange={(v) => patch({ intervalMinutes: Number(v) })}
+                options={PLAYLIST_INTERVALS.map((m) => ({ value: String(m), label: m < 60 ? t('unit.minutes', { n: m }) : t('unit.hours', { n: m / 60 }) }))}
+              />
+            </Field>
+            <Field label={t('playlist.shuffle')}>
+              <Toggle checked={draft.shuffle} onChange={(v) => patch({ shuffle: v })} />
+            </Field>
+            <div className="playlist-picker">
+              {library.map((s) => {
+                const at = draft.themeIds.indexOf(s.id);
+                return (
+                  <button type="button" key={s.id} className={`playlist-item ${at >= 0 ? 'active' : ''}`} onClick={() => toggleTheme(s.id)}>
+                    <span className="playlist-check">{at >= 0 ? at + 1 : ''}</span>
+                    {s.previewUrl ? (
+                      <img src={s.previewUrl} alt="" />
+                    ) : (
+                      <span className="playlist-noimg">
+                        <DesktopPreview theme={s.theme} displayWidth={480} paused chrome={false} />
+                      </span>
+                    )}
+                    <span className="playlist-name">{s.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="muted small">{t('playlist.selected', { n: draft.themeIds.length })}</div>
+          </>
+        ) : (
+          <>
+            <div className="row">
+              <Field label={t('playlist.dayTheme')}>
+                <select value={draft.dayThemeId ?? ''} onChange={(e) => patch({ dayThemeId: e.target.value || null })}>
+                  <option value="">—</option>
+                  {library.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={t('playlist.from')}>
+                <select value={draft.dayStartHour} onChange={(e) => patch({ dayStartHour: Number(e.target.value) })}>
+                  {hours.map((h) => (
+                    <option key={h} value={h}>{`${String(h).padStart(2, '0')}:00`}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <div className="row">
+              <Field label={t('playlist.nightTheme')}>
+                <select value={draft.nightThemeId ?? ''} onChange={(e) => patch({ nightThemeId: e.target.value || null })}>
+                  <option value="">—</option>
+                  {library.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={t('playlist.from')}>
+                <select value={draft.nightStartHour} onChange={(e) => patch({ nightStartHour: Number(e.target.value) })}>
+                  {hours.map((h) => (
+                    <option key={h} value={h}>{`${String(h).padStart(2, '0')}:00`}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            {draft.dayThemeId && draft.nightThemeId && (
+              <Tip>{t('playlist.dayNightSummary', { day: nameOf(draft.dayThemeId), night: nameOf(draft.nightThemeId), from: draft.dayStartHour, to: draft.nightStartHour })}</Tip>
+            )}
+          </>
+        )}
+        {draft.enabled && !ready && <div className="small danger-text">{draft.mode === 'interval' ? t('playlist.needTwo') : t('playlist.needBoth')}</div>}
+        <div className="row end">
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
+          <Button variant="primary" icon="check" onClick={() => void save()}>
+            {t('common.save')}
+          </Button>
+        </div>
+      </div>
     </Modal>
   );
 }

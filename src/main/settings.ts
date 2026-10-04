@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
-import { DEFAULT_SETTINGS, SETTINGS_RANGES, type Settings } from '../shared/ipc';
+import { DEFAULT_SETTINGS, SETTINGS_RANGES, sanitizeMonitorThemes, sanitizePlaylist, type Settings } from '../shared/ipc';
 
 export class SettingsStore {
   private value: Settings = { ...DEFAULT_SETTINGS };
@@ -13,7 +13,7 @@ export class SettingsStore {
   async load(): Promise<Settings> {
     try {
       const raw = JSON.parse(await fs.readFile(this.file, 'utf8'));
-      this.value = { ...DEFAULT_SETTINGS, ...raw };
+      this.value = { ...DEFAULT_SETTINGS, ...raw, playlist: sanitizePlaylist(raw?.playlist), monitorThemes: sanitizeMonitorThemes(raw?.monitorThemes) };
     } catch {
       this.value = { ...DEFAULT_SETTINGS };
     }
@@ -28,6 +28,14 @@ export class SettingsStore {
     const next = { ...this.value } as Record<string, unknown>;
     for (const [key, val] of Object.entries(patch)) {
       if (!(key in DEFAULT_SETTINGS)) continue;
+      if (key === 'playlist') {
+        next.playlist = sanitizePlaylist(val);
+        continue;
+      }
+      if (key === 'monitorThemes') {
+        next.monitorThemes = sanitizeMonitorThemes(val);
+        continue;
+      }
       const expected = typeof (DEFAULT_SETTINGS as unknown as Record<string, unknown>)[key];
       if (key === 'activeThemeId' ? val === null || typeof val === 'string' : typeof val === expected) {
         const range = SETTINGS_RANGES[key as keyof Settings];

@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MutableRefObject } from 'react';
 import type {
   AudioLayer,
+  SysInfoLayer,
+  VisualizerLayer,
+  WebLayer,
   ClockLayer,
   GradientLayer,
   ImageLayer,
@@ -12,6 +15,9 @@ import type {
   VideoLayer,
   WidgetPosition,
 } from '../../shared/theme/schema';
+import { api } from '../app/api';
+import { useT } from '../app/i18n';
+import { systemAudio } from './audio';
 import { ParticleSystem } from './particles';
 import { ShaderRenderer } from './shaders';
 import { Ticker } from './ticker';
@@ -23,9 +29,26 @@ export interface StageControls {
   muted: boolean;
   saturation: number;
   speed: number;
+  brightness?: number;
+  contrast?: number;
+  hue?: number;
+  fpsCap?: number;
 }
 
-export const DEFAULT_CONTROLS: StageControls = { volume: 0.7, muted: false, saturation: 1, speed: 1 };
+export const DEFAULT_CONTROLS: StageControls = { volume: 0.7, muted: false, saturation: 1, speed: 1, brightness: 1, contrast: 1, hue: 0, fpsCap: 0 };
+
+export function stageFilter(c: StageControls): string | undefined {
+  const parts: string[] = [];
+  if (Math.abs(c.saturation - 1) > 0.01) parts.push(`saturate(${c.saturation})`);
+  if (c.brightness !== undefined && Math.abs(c.brightness - 1) > 0.01) parts.push(`brightness(${c.brightness})`);
+  if (c.contrast !== undefined && Math.abs(c.contrast - 1) > 0.01) parts.push(`contrast(${c.contrast})`);
+  if (c.hue) parts.push(`hue-rotate(${c.hue}deg)`);
+  return parts.length ? parts.join(' ') : undefined;
+}
+
+function needsAudio(theme: Theme): boolean {
+  return theme.wallpaper.layers.some((l) => l.visible && (l.type === 'visualizer' || (l.type === 'image' && l.beatPulse > 0)));
+}
 
 interface StageContext {
   ticker: Ticker;
@@ -69,7 +92,14 @@ export function Stage({
 }: StageProps) {
   const fallbackCursor = useRef<{ x: number; y: number } | null>(null);
   const [ticker] = useState(() => new Ticker(theme.wallpaper.fpsLimit));
-  useEffect(() => ticker.setFps(theme.wallpaper.fpsLimit), [ticker, theme.wallpaper.fpsLimit]);
+  const cap = controls.fpsCap ?? 0;
+  useEffect(() => ticker.setFps(cap > 0 ? Math.min(cap, theme.wallpaper.fpsLimit) : theme.wallpaper.fpsLimit), [ticker, theme.wallpaper.fpsLimit, cap]);
+  const wantsAudio = needsAudio(theme) && !paused;
+  useEffect(() => {
+    if (!wantsAudio) return;
+    void systemAudio.acquire();
+    return () => systemAudio.release();
+  }, [wantsAudio]);
   useEffect(() => ticker.setPaused(paused), [ticker, paused]);
   useEffect(() => ticker.setTimeScale(controls.speed), [ticker, controls.speed]);
   useEffect(() => {
@@ -90,7 +120,7 @@ export function Stage({
           position: 'relative',
           overflow: 'hidden',
           background: '#000',
-          filter: Math.abs(controls.saturation - 1) > 0.01 ? `saturate(${controls.saturation})` : undefined,
+          filter: stageFilter(controls),
           ...style,
         }}
       >
@@ -137,6 +167,12 @@ function LayerView({ layer, theme }: { layer: Layer; theme: Theme }) {
       return <TextView layer={layer} />;
     case 'audio':
       return <AudioView layer={layer} />;
+    case 'visualizer':
+      return <VisualizerView layer={layer} />;
+    case 'web':
+      return <WebView layer={layer} />;
+    case 'sysinfo':
+      return <SysInfoView layer={layer} />;
   }
 }
 
@@ -171,9 +207,10 @@ function ImageView({ layer }: { layer: ImageLayer }) {
   const { ticker, assetUrl, cursor, scale } = useStage();
   const ref = useRef<HTMLImageElement>(null);
   const src = assetUrl(layer.asset);
-  const moving = layer.parallax > 0 || layer.slowZoom;
+  const moving = layer.parallax > 0 || layer.slowZoom || layer.beatPulse > 0;
   useEffect(() => {
     if (!moving) return;
+    let pulse = 0;
     const pos = { x: 0, y: 0 };
     return ticker.subscribe((t, dt) => {
       const c = cursor.current;
@@ -185,9 +222,11 @@ function ImageView({ layer }: { layer: ImageLayer }) {
       const amp = layer.parallax * 30;
       const zoom = layer.slowZoom ? 0.04 * (1 + Math.sin(t * 0.05)) : 0;
       const base = 1 + layer.parallax * 0.08;
-      if (ref.current) ref.current.style.transform = `translate(${pos.x * amp}px, ${pos.y * amp}px) scale(${base + zoom})`;
+      if (layer.beatPulse > 0) pulse += (systemAudio.bass() - pulse) * Math.min(1, dt * 18);
+      const beat = layer.beatPulse > 0 ? pulse * layer.beatPulse * 0.08 : 0;
+      if (ref.current) ref.current.style.transform = `translate(${pos.x * amp}px, ${pos.y * amp}px) scale(${base + zoom + beat})`;
     });
-  }, [ticker, moving, layer.parallax, layer.slowZoom, cursor]);
+  }, [ticker, moving, layer.parallax, layer.slowZoom, layer.beatPulse, cursor]);
   if (!src) return <MissingAsset />;
   return (
     <img
@@ -422,6 +461,178 @@ function AudioView({ layer }: { layer: AudioLayer }) {
   }, [paused, target, layer.fadeInSeconds, src]);
   if (!src) return null;
   return <audio ref={ref} src={src} loop preload="auto" />;
+}
+
+function VisualizerView({ layer }: { layer: VisualizerLayer }) {
+  const { ticker } = useStage();
+  const ref = useRef<HTMLCanvasElement>(null);
+  const size = useRef({ w: 0, h: 0 });
+  useCanvasSize(ref, (w, h) => {
+    const c = ref.current;
+    if (!c) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = Math.max(1, Math.round(w * dpr));
+    c.height = Math.max(1, Math.round(h * dpr));
+    c.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
+    size.current = { w, h };
+  });
+  useEffect(() => {
+    const smooth = new Float32Array(layer.bands);
+    const raw = new Float32Array(layer.bands);
+    return ticker.subscribe(() => {
+      const c = ref.current;
+      const ctx = c?.getContext('2d');
+      if (!c || !ctx) return;
+      if (!size.current.w) size.current = { w: c.clientWidth, h: c.clientHeight };
+      const { w, h } = size.current;
+      systemAudio.bands(layer.bands, raw);
+      for (let i = 0; i < layer.bands; i++) {
+        const v = Math.min(1, raw[i] * layer.sensitivity);
+        smooth[i] = v > smooth[i] ? v : smooth[i] * layer.smoothing + v * (1 - layer.smoothing);
+      }
+      drawVisualizer(ctx, w, h, smooth, layer);
+    });
+  }, [ticker, layer]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
+function drawVisualizer(ctx: CanvasRenderingContext2D, w: number, h: number, values: Float32Array, layer: VisualizerLayer) {
+  ctx.clearRect(0, 0, w, h);
+  const n = values.length;
+  const maxH = h * layer.height;
+  const baseY = layer.position === 'bottom' ? h : layer.position === 'top' ? 0 : h / 2;
+  const dir = layer.position === 'top' ? 1 : -1;
+  const grad =
+    layer.position === 'top'
+      ? ctx.createLinearGradient(0, 0, 0, maxH)
+      : layer.position === 'center'
+        ? ctx.createLinearGradient(0, h / 2 - maxH, 0, h / 2 + maxH)
+        : ctx.createLinearGradient(0, h, 0, h - maxH);
+  grad.addColorStop(0, layer.colorA);
+  grad.addColorStop(1, layer.colorB);
+  ctx.fillStyle = grad;
+  ctx.strokeStyle = grad;
+  const order = (i: number) => (layer.mirror ? values[Math.abs(Math.round((i - (n - 1) / 2) * 2)) % n] ?? 0 : values[i]);
+
+  if (layer.style === 'circle') {
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.min(w, h) * 0.18;
+    ctx.lineWidth = Math.max(2, ((Math.PI * 2 * r) / n) * 0.55);
+    ctx.lineCap = 'round';
+    for (let i = 0; i < n; i++) {
+      const v = layer.mirror ? values[i < n / 2 ? i * 2 : (n - 1 - i) * 2] ?? 0 : values[i];
+      const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+      const len = 4 + v * Math.min(w, h) * layer.height * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      ctx.lineTo(cx + Math.cos(a) * (r + len), cy + Math.sin(a) * (r + len));
+      ctx.stroke();
+    }
+    return;
+  }
+
+  if (layer.style === 'wave') {
+    ctx.lineWidth = Math.max(2, h * 0.004);
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * w;
+      const v = order(i);
+      const y = layer.position === 'center' ? baseY - v * maxH * (i % 2 ? 1 : -1) : baseY + dir * v * maxH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    return;
+  }
+
+  const gap = Math.max(1, (w / n) * 0.25);
+  const bw = w / n - gap;
+  for (let i = 0; i < n; i++) {
+    const v = Math.max(0.02, order(i));
+    const bh = v * maxH;
+    const x = i * (bw + gap) + gap / 2;
+    if (layer.position === 'center') ctx.fillRect(x, baseY - bh, bw, bh * 2);
+    else ctx.fillRect(x, dir < 0 ? baseY - bh : baseY, bw, bh);
+  }
+}
+
+function WebView({ layer }: { layer: WebLayer }) {
+  const { scale } = useStage();
+  const zoom = layer.zoom * Math.max(scale, 0.2);
+  return (
+    <iframe
+      src={layer.url}
+      title=""
+      sandbox="allow-scripts allow-same-origin"
+      referrerPolicy="no-referrer"
+      tabIndex={-1}
+      style={{
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        width: `${100 / zoom}%`,
+        height: `${100 / zoom}%`,
+        transform: `scale(${zoom})`,
+        transformOrigin: '0 0',
+        border: 'none',
+        pointerEvents: 'none',
+        background: '#000',
+      }}
+    />
+  );
+}
+
+interface SysInfo {
+  cpu: number;
+  ram: number;
+  ramUsedGb: number;
+  ramTotalGb: number;
+}
+
+function SysInfoView({ layer }: { layer: SysInfoLayer }) {
+  const { scale, paused } = useStage();
+  const t = useT();
+  const [info, setInfo] = useState<SysInfo | null>(null);
+  useEffect(() => {
+    if (paused) return;
+    let alive = true;
+    const poll = async () => {
+      const next = await api.system.sysinfo().catch(() => null);
+      if (alive && next) setInfo(next);
+    };
+    void poll();
+    const id = setInterval(poll, 2000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [paused]);
+  const rows: Array<{ label: string; value: number; extra?: string }> = [];
+  if (layer.showCpu) rows.push({ label: t('sysinfo.cpu'), value: info?.cpu ?? 0 });
+  if (layer.showRam) rows.push({ label: t('sysinfo.ram'), value: info?.ram ?? 0, extra: info ? `${info.ramUsedGb.toFixed(1)} / ${info.ramTotalGb.toFixed(0)} GB` : '' });
+  const fs = layer.fontSize * scale;
+  return (
+    <div style={positionStyle(layer.position, scale)}>
+      <div style={{ color: layer.color, fontFamily: FONTS.mono, fontSize: fs, display: 'grid', gap: fs * 0.5, minWidth: fs * 10, textShadow: '0 1px 6px rgba(0,0,0,.4)' }}>
+        {rows.map((r) => (
+          <div key={r.label}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: fs }}>
+              <span style={{ opacity: 0.8 }}>{r.label}</span>
+              <span>{Math.round(r.value)}%</span>
+            </div>
+            {layer.style === 'bars' && (
+              <div style={{ height: Math.max(2, fs * 0.3), borderRadius: fs, background: 'rgba(255,255,255,.18)', overflow: 'hidden', marginTop: fs * 0.2 }}>
+                <div style={{ width: `${Math.min(100, r.value)}%`, height: '100%', background: layer.color, transition: 'width .8s ease' }} />
+              </div>
+            )}
+            {r.extra && <div style={{ fontSize: fs * 0.65, opacity: 0.7, marginTop: fs * 0.15 }}>{r.extra}</div>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function MissingAsset() {

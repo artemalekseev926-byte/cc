@@ -12,12 +12,16 @@ import type {
   ParticlesLayer,
   ShaderLayer,
   ShaderPreset,
+  SysInfoLayer,
   TextLayer,
   Theme,
   VideoLayer,
+  VisualizerLayer,
+  WebLayer,
   WidgetPosition,
 } from '../../shared/theme/schema';
 import { THEME_TAGS } from '../../shared/sharing/validate';
+import { isHttpsUrl } from '../../shared/theme/schema';
 import { useT, type TFunction } from '../app/i18n';
 import { extractAccent } from '../app/media';
 import { useEditingTheme, useStudio, type InspectorSection } from '../app/store';
@@ -124,6 +128,9 @@ function LayerInspector({ layer, theme }: { layer: Layer; theme: Theme }) {
       {layer.type === 'shader' && <ShaderProps layer={layer} set={set} />}
       {layer.type === 'clock' && <ClockProps layer={layer} set={set} />}
       {layer.type === 'text' && <TextProps layer={layer} set={set} />}
+      {layer.type === 'visualizer' && <VisualizerProps layer={layer} set={set} />}
+      {layer.type === 'web' && <WebProps layer={layer} set={set} />}
+      {layer.type === 'sysinfo' && <SysInfoProps layer={layer} set={set} />}
 
       {layer.type !== 'audio' && (
         <>
@@ -229,6 +236,9 @@ function ImageProps({ layer, theme, set }: { layer: ImageLayer; theme: Theme; se
       </Field>
       <Field label={t('prop.blur')} hint={t('prop.blurHint')}>
         <Slider value={layer.blur} min={0} max={40} format={(v) => (v === 0 ? t('common.off') : `${v}px`)} onChange={(v) => set({ blur: v }, 'blur')} />
+      </Field>
+      <Field label={t('prop.beatPulse')} hint={t('prop.beatPulseHint')}>
+        <Slider value={layer.beatPulse} min={0} max={1} step={0.05} format={(v) => (v === 0 ? t('common.off') : pct(v))} onChange={(v) => set({ beatPulse: v }, 'beatPulse')} />
       </Field>
     </>
   );
@@ -409,6 +419,101 @@ function TextProps({ layer, set }: { layer: TextLayer; set: Setter<TextLayer> })
         <ColorField value={layer.color} onChange={(v) => v && set({ color: v }, 'color')} />
       </Field>
       <FontField layer={layer} set={set} />
+    </>
+  );
+}
+
+function VisualizerProps({ layer, set }: { layer: VisualizerLayer; set: Setter<VisualizerLayer> }) {
+  const t = useT();
+  return (
+    <>
+      <Field label={t('prop.vizStyle')}>
+        <Segmented value={layer.style} onChange={(v) => set({ style: v })} options={(['bars', 'wave', 'circle'] as const).map((v) => ({ value: v, label: t(`viz.style.${v}`) }))} />
+      </Field>
+      {layer.style !== 'circle' && (
+        <Field label={t('prop.vizPosition')}>
+          <Segmented value={layer.position} onChange={(v) => set({ position: v })} options={(['top', 'center', 'bottom'] as const).map((v) => ({ value: v, label: t(`viz.position.${v}`) }))} />
+        </Field>
+      )}
+      <Field label={t('prop.colorA')}>
+        <ColorField value={layer.colorA} onChange={(v) => v && set({ colorA: v }, 'colorA')} />
+      </Field>
+      <Field label={t('prop.colorB')}>
+        <ColorField value={layer.colorB} onChange={(v) => v && set({ colorB: v }, 'colorB')} />
+      </Field>
+      <Field label={t('prop.vizHeight')}>
+        <Slider value={layer.height} min={0.05} max={1} step={0.01} format={pct} onChange={(v) => set({ height: v }, 'height')} />
+      </Field>
+      <Field label={t('prop.vizSensitivity')} hint={t('prop.vizSensitivityHint')}>
+        <Slider value={layer.sensitivity} min={0.2} max={4} step={0.1} format={(v) => `${v.toFixed(1)}×`} onChange={(v) => set({ sensitivity: v }, 'sensitivity')} />
+      </Field>
+      <Field label={t('prop.vizMirror')}>
+        <Toggle checked={layer.mirror} onChange={(v) => set({ mirror: v })} />
+      </Field>
+      <Advanced>
+        <Field label={t('prop.vizBands')}>
+          <Slider value={layer.bands} min={16} max={128} step={8} onChange={(v) => set({ bands: v }, 'bands')} />
+        </Field>
+        <Field label={t('prop.vizSmoothing')} hint={t('prop.vizSmoothingHint')}>
+          <Slider value={layer.smoothing} min={0} max={0.95} step={0.05} format={pct} onChange={(v) => set({ smoothing: v }, 'smoothing')} />
+        </Field>
+      </Advanced>
+      <Tip>{t('prop.vizTip')}</Tip>
+    </>
+  );
+}
+
+function WebProps({ layer, set }: { layer: WebLayer; set: Setter<WebLayer> }) {
+  const t = useT();
+  const [draft, setDraft] = useState(layer.url);
+  const valid = isHttpsUrl(draft.trim());
+  const commit = () => {
+    if (valid && draft.trim() !== layer.url) set({ url: draft.trim() });
+  };
+  return (
+    <>
+      <Field label={t('prop.url')} hint={t('prop.urlHint')}>
+        <input
+          type="url"
+          value={draft}
+          className={valid ? '' : 'invalid'}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => e.key === 'Enter' && commit()}
+          spellCheck={false}
+        />
+      </Field>
+      {!valid && <div className="small danger-text">{t('prop.urlInvalid')}</div>}
+      <Field label={t('prop.zoom')}>
+        <Slider value={layer.zoom} min={0.25} max={3} step={0.05} format={pct} onChange={(v) => set({ zoom: v }, 'zoom')} />
+      </Field>
+      <Tip>{t('prop.webTip')}</Tip>
+    </>
+  );
+}
+
+function SysInfoProps({ layer, set }: { layer: SysInfoLayer; set: Setter<SysInfoLayer> }) {
+  const t = useT();
+  return (
+    <>
+      <Field label={t('prop.position')}>
+        <PositionField value={layer.position} onChange={(v) => set({ position: v })} />
+      </Field>
+      <Field label={t('prop.sysStyle')}>
+        <Segmented value={layer.style} onChange={(v) => set({ style: v })} options={(['bars', 'text'] as const).map((v) => ({ value: v, label: t(`sys.style.${v}`) }))} />
+      </Field>
+      <Field label={t('prop.showCpu')}>
+        <Toggle checked={layer.showCpu} onChange={(v) => set({ showCpu: v })} />
+      </Field>
+      <Field label={t('prop.showRam')}>
+        <Toggle checked={layer.showRam} onChange={(v) => set({ showRam: v })} />
+      </Field>
+      <Field label={t('prop.fontSize')}>
+        <Slider value={layer.fontSize} min={10} max={64} onChange={(v) => set({ fontSize: v }, 'fontSize')} format={(v) => `${v}px`} />
+      </Field>
+      <Field label={t('prop.color')}>
+        <ColorField value={layer.color} onChange={(v) => v && set({ color: v }, 'color')} />
+      </Field>
     </>
   );
 }

@@ -60,7 +60,7 @@ export const useStudio = create<StudioState>((set, get) => ({
   caps: null,
   displays: [],
   library: [],
-  desktop: { activeThemeId: null, running: false, paused: false, pauseReason: null },
+  desktop: { activeThemeId: null, running: false, paused: false, pauseReason: null, monitorThemes: {} },
   toasts: [],
   editor: { history: null, selectedLayerId: null, section: 'layer', dirty: false, saving: false },
   focusThemeId: null,

@@ -164,6 +164,28 @@ export const TOOLS: Tool[] = [
     keywords: ['текст', 'надпись', 'цитата', 'подпись', 'слова', 'text', 'quote', 'label', 'caption'],
   },
   {
+    id: 'visualizer',
+    category: 'effects',
+    icon: 'audio',
+    popular: true,
+    action: { kind: 'addLayer', layer: 'visualizer' },
+    keywords: ['визуализатор', 'эквалайзер', 'спектр', 'музыка', 'реагирует на звук', 'ритм', 'бит', 'visualizer', 'equalizer', 'spectrum', 'audio reactive', 'beat', 'music'],
+  },
+  {
+    id: 'web',
+    category: 'widgets',
+    icon: 'globe',
+    action: { kind: 'addLayer', layer: 'web' },
+    keywords: ['сайт', 'веб', 'страница', 'интернет', 'ссылка', 'html', 'web', 'website', 'page', 'url', 'browser'],
+  },
+  {
+    id: 'sysinfo',
+    category: 'widgets',
+    icon: 'cpu',
+    action: { kind: 'addLayer', layer: 'sysinfo' },
+    keywords: ['процессор', 'память', 'нагрузка', 'монитор системы', 'оперативка', 'цп', 'cpu', 'ram', 'memory', 'system monitor', 'usage', 'load'],
+  },
+  {
     id: 'accent',
     category: 'colors',
     icon: 'palette',

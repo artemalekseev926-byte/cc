@@ -1,6 +1,9 @@
 import {
   THEME_SCHEMA_VERSION,
   type AudioLayer,
+  type SysInfoLayer,
+  type VisualizerLayer,
+  type WebLayer,
   type ClockLayer,
   type GradientLayer,
   type ImageLayer,
@@ -66,11 +69,35 @@ export function createGradientLayer(colors = ['#24135f', '#6c5cff', '#00c2ff']):
 }
 
 export function createImageLayer(asset: string, name = 'Картинка'): ImageLayer {
-  return { ...base(name), type: 'image', asset, fit: 'cover', parallax: 0, blur: 0, slowZoom: false };
+  return { ...base(name), type: 'image', asset, fit: 'cover', parallax: 0, blur: 0, slowZoom: false, beatPulse: 0 };
 }
 
 export function createVideoLayer(asset: string, name = 'Видео'): VideoLayer {
   return { ...base(name), type: 'video', asset, fit: 'cover', playbackRate: 1, sound: false, volume: 0.6 };
+}
+
+export function createVisualizerLayer(): VisualizerLayer {
+  return {
+    ...base('Визуализатор'),
+    type: 'visualizer',
+    style: 'bars',
+    position: 'bottom',
+    bands: 64,
+    height: 0.3,
+    sensitivity: 1.2,
+    smoothing: 0.7,
+    mirror: true,
+    colorA: '#7c6cff',
+    colorB: '#00e0ff',
+  };
+}
+
+export function createWebLayer(url = 'https://example.com'): WebLayer {
+  return { ...base('Веб-страница'), type: 'web', url, zoom: 1 };
+}
+
+export function createSysInfoLayer(): SysInfoLayer {
+  return { ...base('Монитор системы'), type: 'sysinfo', showCpu: true, showRam: true, style: 'bars', position: 'top-right', color: '#ffffff', fontSize: 18 };
 }
 
 export function createAudioLayer(asset: string, name = 'Звук'): AudioLayer {
@@ -141,6 +168,12 @@ export function createLayer(type: LayerType, asset?: string): Layer {
       return createTextLayer();
     case 'audio':
       return createAudioLayer(asset ?? '');
+    case 'visualizer':
+      return createVisualizerLayer();
+    case 'web':
+      return createWebLayer();
+    case 'sysinfo':
+      return createSysInfoLayer();
   }
 }
 

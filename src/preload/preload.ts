@@ -35,6 +35,7 @@ const api: DeskforgeApi = {
   },
   desktop: {
     apply: (themeId) => invoke(IPC.desktopApply, themeId),
+    applyOn: (themeId, displayId) => invoke(IPC.desktopApplyOn, themeId, displayId),
     previewLive: (theme, seconds) => invoke(IPC.desktopPreviewLive, theme, seconds),
     stop: () => invoke(IPC.desktopStop),
     restoreOriginal: () => invoke(IPC.desktopRestore),
@@ -49,6 +50,7 @@ const api: DeskforgeApi = {
     appsStatus: () => invoke(IPC.appsStatus),
     installApp: (id) => invoke(IPC.appsInstall, id),
     uninstallApp: (id) => invoke(IPC.appsUninstall, id),
+    sysinfo: () => invoke(IPC.systemSysinfo),
   },
   app: {
     showStudio: () => ipcRenderer.send(IPC.appShowStudio),

@@ -9,7 +9,7 @@ import type { Theme, WindowsStyle } from '../../shared/theme/schema';
 import { win32 } from '../win32/api';
 import { KEYS, binary, dword, regDelete, regDeleteKey, regGet, regKeyExists, regSet, regSetDefault, sz, type RegValue } from '../win32/registry';
 import { TWEAKS, type SetTweakResult, type TweakId, type TweakState, type TweakValue } from '../../shared/system/tweaks';
-import { attachToDesktop, findDesktopListView, hwndFromBuffer, isForegroundFullscreen } from '../win32/workerw';
+import { attachToDesktop, findDesktopListView, hwndFromBuffer, isForegroundFullscreen, isForegroundMaximized } from '../win32/workerw';
 import type { ApplyOptions, PlatformAdapter } from './types';
 
 interface Backup {
@@ -447,6 +447,10 @@ export class WindowsPlatform implements PlatformAdapter {
 
   isForegroundFullscreen(): boolean {
     return isForegroundFullscreen();
+  }
+
+  isForegroundMaximized(): boolean {
+    return isForegroundMaximized();
   }
 
   onShellRestart(cb: () => void): void {

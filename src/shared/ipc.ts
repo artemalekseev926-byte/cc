@@ -31,6 +31,8 @@ export const IPC = {
   systemTweaks: 'system:tweaks',
   systemSetTweak: 'system:setTweak',
   systemRestartExplorer: 'system:restartExplorer',
+  systemSysinfo: 'system:sysinfo',
+  desktopApplyOn: 'desktop:applyOn',
   appsStatus: 'apps:status',
   appsInstall: 'apps:install',
   appsUninstall: 'apps:uninstall',
@@ -111,7 +113,77 @@ export interface DesktopStatus {
   activeThemeId: string | null;
   running: boolean;
   paused: boolean;
-  pauseReason: 'fullscreen' | 'battery' | 'manual' | null;
+  pauseReason: 'fullscreen' | 'maximized' | 'battery' | 'manual' | null;
+  monitorThemes: Record<string, string>;
+}
+
+export interface SysInfo {
+  cpu: number;
+  ram: number;
+  ramUsedGb: number;
+  ramTotalGb: number;
+}
+
+export type PlaylistMode = 'interval' | 'dayNight';
+
+export interface Playlist {
+  enabled: boolean;
+  mode: PlaylistMode;
+  themeIds: string[];
+  intervalMinutes: number;
+  shuffle: boolean;
+  dayThemeId: string | null;
+  nightThemeId: string | null;
+  dayStartHour: number;
+  nightStartHour: number;
+}
+
+export const PLAYLIST_INTERVALS = [5, 15, 30, 60, 180, 720] as const;
+export const FPS_CAPS = [0, 15, 24, 30, 60] as const;
+
+export const DEFAULT_PLAYLIST: Playlist = {
+  enabled: false,
+  mode: 'interval',
+  themeIds: [],
+  intervalMinutes: 30,
+  shuffle: false,
+  dayThemeId: null,
+  nightThemeId: null,
+  dayStartHour: 8,
+  nightStartHour: 20,
+};
+
+export function sanitizePlaylist(input: unknown): Playlist {
+  const raw = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === 'string' && v.length > 0 && v.length < 200 ? v : null);
+  const hour = (v: unknown, d: number) => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 23 ? v : d);
+  const ids = Array.isArray(raw.themeIds) ? raw.themeIds.map(str).filter((v): v is string => v !== null) : [];
+  return {
+    enabled: raw.enabled === true,
+    mode: raw.mode === 'dayNight' ? 'dayNight' : 'interval',
+    themeIds: [...new Set(ids)].slice(0, 100),
+    intervalMinutes: typeof raw.intervalMinutes === 'number' ? Math.min(1440, Math.max(1, Math.round(raw.intervalMinutes))) : DEFAULT_PLAYLIST.intervalMinutes,
+    shuffle: raw.shuffle === true,
+    dayThemeId: str(raw.dayThemeId),
+    nightThemeId: str(raw.nightThemeId),
+    dayStartHour: hour(raw.dayStartHour, DEFAULT_PLAYLIST.dayStartHour),
+    nightStartHour: hour(raw.nightStartHour, DEFAULT_PLAYLIST.nightStartHour),
+  };
+}
+
+export function sanitizeMonitorThemes(input: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!input || typeof input !== 'object') return out;
+  for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+    if (/^\d{1,20}$/.test(k) && typeof v === 'string' && v.length > 0 && v.length < 200) out[k] = v;
+  }
+  return out;
+}
+
+export function isNightAt(hour: number, p: Pick<Playlist, 'dayStartHour' | 'nightStartHour'>): boolean {
+  const { dayStartHour: d, nightStartHour: n } = p;
+  if (d === n) return false;
+  return d < n ? hour < d || hour >= n : hour >= n && hour < d;
 }
 
 export interface ImportArtworkResult {
@@ -158,6 +230,13 @@ export interface Settings {
   wallpaperSpeed: number;
   launchCount: number;
   supportPromptDisabled: boolean;
+  wallpaperBrightness: number;
+  wallpaperContrast: number;
+  wallpaperHue: number;
+  wallpaperFpsCap: number;
+  pauseWhenMaximized: boolean;
+  monitorThemes: Record<string, string>;
+  playlist: Playlist;
 }
 
 export const SETTINGS_RANGES: Partial<Record<keyof Settings, [number, number]>> = {
@@ -165,6 +244,10 @@ export const SETTINGS_RANGES: Partial<Record<keyof Settings, [number, number]>> 
   wallpaperSaturation: [0, 2],
   wallpaperSpeed: [0.25, 2],
   launchCount: [0, 1_000_000],
+  wallpaperBrightness: [0.3, 1.5],
+  wallpaperContrast: [0.5, 1.5],
+  wallpaperHue: [-180, 180],
+  wallpaperFpsCap: [0, 240],
 };
 
 export interface WallpaperControls {
@@ -172,10 +255,23 @@ export interface WallpaperControls {
   muted: boolean;
   saturation: number;
   speed: number;
+  brightness: number;
+  contrast: number;
+  hue: number;
+  fpsCap: number;
 }
 
 export function controlsFromSettings(s: Settings): WallpaperControls {
-  return { volume: s.wallpaperVolume, muted: s.wallpaperMuted, saturation: s.wallpaperSaturation, speed: s.wallpaperSpeed };
+  return {
+    volume: s.wallpaperVolume,
+    muted: s.wallpaperMuted,
+    saturation: s.wallpaperSaturation,
+    speed: s.wallpaperSpeed,
+    brightness: s.wallpaperBrightness,
+    contrast: s.wallpaperContrast,
+    hue: s.wallpaperHue,
+    fpsCap: s.wallpaperFpsCap,
+  };
 }
 
 export const AUTHOR_GITHUB_URL = 'https://github.com/artemalekseev926-byte/cc';
@@ -195,6 +291,13 @@ export const DEFAULT_SETTINGS: Settings = {
   wallpaperSpeed: 1,
   launchCount: 0,
   supportPromptDisabled: false,
+  wallpaperBrightness: 1,
+  wallpaperContrast: 1,
+  wallpaperHue: 0,
+  wallpaperFpsCap: 0,
+  pauseWhenMaximized: true,
+  monitorThemes: {},
+  playlist: DEFAULT_PLAYLIST,
 };
 
 export interface WallpaperFrameReport {
@@ -227,6 +330,7 @@ export interface DeskforgeApi {
   };
   desktop: {
     apply(themeId: string): Promise<ApplyResult>;
+    applyOn(themeId: string, displayId: number | null): Promise<void>;
     previewLive(theme: Theme, seconds: number): Promise<void>;
     stop(): Promise<void>;
     restoreOriginal(): Promise<ApplyResult>;
@@ -241,6 +345,7 @@ export interface DeskforgeApi {
     appsStatus(): Promise<AppsStatus>;
     installApp(id: string): Promise<AppActionResult>;
     uninstallApp(id: string): Promise<AppActionResult>;
+    sysinfo(): Promise<SysInfo>;
   };
   app: {
     showStudio(): void;

@@ -54,6 +54,10 @@ export class GenericPlatform implements PlatformAdapter {
     return false;
   }
 
+  isForegroundMaximized(): boolean {
+    return false;
+  }
+
   onShellRestart(): void {
   }
 

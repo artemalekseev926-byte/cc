@@ -101,7 +101,7 @@ export function estimateLayer(layer: Layer, theme: Theme, display: DisplayInfo):
       const moving = layer.parallax > 0 || layer.slowZoom;
       const blurCost = layer.blur > 0 ? (layer.blur / 40) * 3 * screenScale : 0;
       return {
-        cpu: moving ? 0.6 * fpsFactor(fps) + (layer.parallax > 0 ? 0.4 : 0) : 0.02,
+        cpu: moving || layer.beatPulse > 0 ? 0.6 * fpsFactor(fps) + (layer.parallax > 0 ? 0.4 : 0) : 0.02,
         gpu: (moving ? composite * 1.5 + blurCost * fpsFactor(fps) : 0.1 * screenScale + blurCost * 0.05) * blendPenalty,
         ram: decoded * 1.2 + 4,
         vram: decoded * display.count * (moving ? 1.5 : 1),
@@ -152,6 +152,22 @@ export function estimateLayer(layer: Layer, theme: Theme, display: DisplayInfo):
 
     case 'text':
       return { cpu: 0, gpu: 0.02, ram: 0.5, vram: 1 };
+
+    case 'visualizer': {
+      const area = layer.position === 'center' || layer.style === 'circle' ? 0.6 : layer.height;
+      return {
+        cpu: 0.8 + layer.bands * 0.004 * fpsFactor(fps),
+        gpu: (composite + area * 1.2 * screenScale * fpsFactor(fps)) * blendPenalty,
+        ram: 8,
+        vram: (screenPx * 4 * display.count) / MB,
+      };
+    }
+
+    case 'web':
+      return { cpu: 2.5, gpu: 2 * screenScale, ram: 120, vram: (screenPx * 4 * display.count * 2) / MB };
+
+    case 'sysinfo':
+      return { cpu: 0.1, gpu: 0.05, ram: 1, vram: 2 };
 
     case 'audio': {
       const asset = theme.assets[layer.asset];

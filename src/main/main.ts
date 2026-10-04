@@ -1,7 +1,9 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, desktopCapturer, ipcMain, session, shell } from 'electron';
 import { IPC, controlsFromSettings, type Settings } from '../shared/ipc';
+import type { Theme } from '../shared/theme/schema';
+import { PlaylistScheduler } from './playlist';
 import { PACKAGE_EXT } from '../shared/sharing/package';
 import { describeActive, registerIpc } from './ipc';
 import { createPlatform } from './platform';
@@ -37,6 +39,7 @@ const settings = new SettingsStore(userData);
 const store = new ThemeStore(join(userData, 'themes'));
 const platform = createPlatform(userData);
 let host: WallpaperHost;
+let playlist: PlaylistScheduler;
 
 function createStudio(show: boolean): BrowserWindow {
   const win = new BrowserWindow({
@@ -106,7 +109,7 @@ function onSettingsChanged(next: Settings) {
 
 function stopWallpaper() {
   host.stop();
-  void settings.set({ activeThemeId: null });
+  void settings.set({ activeThemeId: null, monitorThemes: {} });
 }
 
 function quitApp() {
@@ -115,10 +118,40 @@ function quitApp() {
 }
 
 function applySettingsSideEffects(s: Settings) {
+  host?.setPauseWhenMaximized(s.pauseWhenMaximized);
   if (process.platform === 'win32' || process.platform === 'darwin') {
     const portable = process.env.PORTABLE_EXECUTABLE_FILE;
     app.setLoginItemSettings({ openAtLogin: s.launchAtStartup, args: ['--hidden'], ...(portable ? { path: portable } : {}) });
   }
+}
+
+function allowAudioCapture() {
+  session.defaultSession.setDisplayMediaRequestHandler(
+    (request, callback) => {
+      const fromOwnPage = request.frame?.url.startsWith('file:') || request.frame?.url.startsWith(process.env.DESKFORGE_DEV_URL ?? '\0');
+      if (!fromOwnPage || process.platform !== 'win32') {
+        callback({});
+        return;
+      }
+      void desktopCapturer
+        .getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } })
+        .then((sources) => callback(sources[0] ? { video: sources[0], audio: 'loopback' } : {}))
+        .catch(() => callback({}));
+    },
+    { useSystemPicker: false },
+  );
+}
+
+async function resumeMonitorThemes(s: Settings) {
+  const overrides = new Map<number, Theme>();
+  for (const [displayId, themeId] of Object.entries(s.monitorThemes)) {
+    try {
+      overrides.set(Number(displayId), await store.load(themeId));
+    } catch {
+      continue;
+    }
+  }
+  host.setOverrides(overrides);
 }
 
 async function importFromFile(path: string) {
@@ -149,9 +182,24 @@ app.whenReady().then(async () => {
   await store.init();
   const s = await settings.load();
   handleThemeProtocol(store);
+  allowAudioCapture();
   await settings.set({ launchCount: s.launchCount + 1 });
   host = new WallpaperHost(platform);
   host.setControls(controlsFromSettings(s));
+  host.setPauseWhenMaximized(s.pauseWhenMaximized);
+  playlist = new PlaylistScheduler(settings, {
+    running: () => host.status().running,
+    currentId: () => host.activeTheme?.id ?? null,
+    async apply(id) {
+      try {
+        await host.show(await store.load(id));
+        await settings.set({ activeThemeId: id });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+  });
   host.onStatus((status) => {
     refreshTray();
     broadcast(IPC.desktopStatusChanged, status);
@@ -166,6 +214,7 @@ app.whenReady().then(async () => {
     studioWindow: () => studio,
     applySettingsSideEffects,
     broadcast,
+    playlist,
   });
 
   tray = new TrayController(host, settings, { showStudio, quit: quitApp, stopWallpaper });
@@ -180,6 +229,7 @@ app.whenReady().then(async () => {
   ipcMain.on(IPC.appHideFlyout, () => tray?.hideFlyout());
   ipcMain.on(IPC.appQuit, quitApp);
 
+  await resumeMonitorThemes(s);
   if (s.activeThemeId) {
     try {
       await host.show(await store.load(s.activeThemeId));
@@ -188,6 +238,8 @@ app.whenReady().then(async () => {
       await settings.set({ activeThemeId: null });
     }
   }
+
+  playlist.start();
 
   const startHidden = process.argv.includes('--hidden') && host.status().running;
   studio = createStudio(!startHidden);

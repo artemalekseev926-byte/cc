@@ -13,6 +13,7 @@ export interface PlatformAdapter {
   restoreOriginal(): Promise<ApplyResult>;
   attachWallpaperWindow(win: BrowserWindow, bounds: { x: number; y: number; width: number; height: number }): boolean;
   isForegroundFullscreen(): boolean;
+  isForegroundMaximized(): boolean;
   onShellRestart(cb: () => void): void;
   tweaks(): Promise<TweakState[]>;
   setTweak(id: TweakId, value: TweakValue): Promise<SetTweakResult>;

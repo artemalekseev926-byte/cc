@@ -13,7 +13,7 @@ function dynamicKeys(): string[] {
   TOOLS.forEach((t) => keys.push(`tool.${t.id}.title`, `tool.${t.id}.desc`));
   add('category.', CATEGORY_ORDER);
   PRESETS.forEach((p) => keys.push(p.blurbKey));
-  const layerTypes = ['solid', 'gradient', 'image', 'video', 'audio', 'particles', 'shader', 'clock', 'text'];
+  const layerTypes = ['solid', 'gradient', 'image', 'video', 'audio', 'particles', 'shader', 'clock', 'text', 'visualizer', 'web', 'sysinfo'];
   add('layer.type.', layerTypes);
   add('layer.help.', layerTypes);
   add('preset.layer.', ['snow', 'rain', 'fireflies', 'stars', 'bubbles', 'sakura', 'aurora', 'waves', 'plasma', 'nebula', 'grid']);
@@ -28,7 +28,10 @@ function dynamicKeys(): string[] {
   add('check.perf.', ratings);
   add('library.source.', ['builtin', 'local']);
   add('nav.', ['library', 'editor', 'share', 'system', 'performance', 'settings']);
-  add('status.paused.', ['fullscreen', 'battery', 'manual']);
+  add('status.paused.', ['fullscreen', 'maximized', 'battery', 'manual']);
+  add('viz.style.', ['bars', 'wave', 'circle']);
+  add('viz.position.', ['top', 'center', 'bottom']);
+  add('sys.style.', ['bars', 'text']);
   add('tag.', THEME_TAGS);
   add('taskbar.', ['bottom', 'top', 'left', 'right']);
   add('import.package.', ['invalid', 'unsafe', 'tooBig']);

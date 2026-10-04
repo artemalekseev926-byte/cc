@@ -88,7 +88,8 @@ function createMockApi(): DeskforgeApi {
       previewLive: async () => undefined,
       stop: async () => undefined,
       restoreOriginal: async () => ({ ok: true, steps: [], explorerRestarted: false }),
-      status: async () => ({ activeThemeId: null, running: false, paused: false, pauseReason: null }),
+      applyOn: async () => undefined,
+      status: async () => ({ activeThemeId: null, running: false, paused: false, pauseReason: null, monitorThemes: {} }),
       setPaused: async () => undefined,
       onStatus: noop,
     },
@@ -119,6 +120,7 @@ function createMockApi(): DeskforgeApi {
         return { ok: true };
       },
       uninstallApp: async () => ({ ok: true }),
+      sysinfo: async () => ({ cpu: 12 + Math.round(Math.random() * 20), ram: 48, ramUsedGb: 7.7, ramTotalGb: 16 }),
     },
     app: {
       showStudio: () => undefined,

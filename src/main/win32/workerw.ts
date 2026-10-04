@@ -71,6 +71,16 @@ export function isForegroundFullscreen(): boolean {
   return rect.left <= monitor.left && rect.top <= monitor.top && rect.right >= monitor.right && rect.bottom >= monitor.bottom;
 }
 
+export function isForegroundMaximized(): boolean {
+  const api = win32();
+  if (!api) return false;
+  const fg = api.GetForegroundWindow();
+  if (!fg) return false;
+  const cls = api.GetClassNameW(fg);
+  if (cls === 'Progman' || cls === 'WorkerW' || cls === 'Shell_TrayWnd') return false;
+  return Boolean(api.IsZoomed(fg)) && Boolean(api.IsWindowVisible(fg));
+}
+
 export function hwndFromBuffer(buf: Buffer): number {
   return buf.length >= 8 ? Number(buf.readBigUInt64LE(0)) : buf.readUInt32LE(0);
 }
