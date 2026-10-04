@@ -1,23 +1,14 @@
-/**
- * Artist import pipeline (pure part).
- *
- * An artist drops files onto the Workshop page; we classify them, decide which
- * ones are usable, and build a ready-to-publish theme around them. The IO part
- * (copying files, probing video metadata, generating previews) lives in the
- * main process and the renderer respectively.
- */
 import { createEmptyTheme, createImageLayer, createVideoLayer } from '../theme/factory';
 import { slugify, type Asset, type Theme } from '../theme/schema';
 
 export const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif'] as const;
 export const VIDEO_EXTENSIONS = ['mp4', 'webm', 'm4v', 'mov'] as const;
 
-/** Limits chosen to keep Workshop downloads reasonable and playback smooth. */
 export const LIMITS = {
   imageMaxBytes: 60 * 1024 * 1024,
   videoMaxBytes: 1024 * 1024 * 1024,
   maxFilesPerTheme: 16,
-  previewMaxBytes: 1024 * 1024, // Steam's limit for a Workshop preview image
+  previewMaxBytes: 1024 * 1024,
 };
 
 export type ImportKind = 'image' | 'video' | 'theme' | 'unsupported';
@@ -31,9 +22,7 @@ export interface ImportCandidate {
 export interface ClassifiedFile extends ImportCandidate {
   kind: ImportKind;
   ext: string;
-  /** i18n key with the reason when the file cannot be used. */
   problem?: string;
-  /** i18n key for a non-blocking hint (e.g. "MOV may not play everywhere"). */
   warning?: string;
 }
 
@@ -59,13 +48,11 @@ export function classifyFile(file: ImportCandidate): ClassifiedFile {
   return { ...file, ext, kind: 'unsupported', problem: 'import.problem.unknown' };
 }
 
-/** Name of the file without extension, humanized: "my_forest-night.mp4" → "My forest night". */
 export function humanizeFileName(name: string): string {
   const base = name.replace(/\.[^.]+$/, '').replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim();
   return base ? base[0].toUpperCase() + base.slice(1) : 'Untitled';
 }
 
-/** Unique asset key derived from the file name. */
 export function assetKeyFor(name: string, existing: Record<string, unknown>): string {
   const base = slugify(name.replace(/\.[^.]+$/, '')) || 'asset';
   let key = base;
@@ -79,10 +66,6 @@ export interface ImportedAsset {
   asset: Asset;
 }
 
-/**
- * Builds a theme for freshly imported artwork: videos become the base layer,
- * images go on top (or become the base when there is no video).
- */
 export function buildThemeFromArtwork(id: string, title: string, author: string, assets: ImportedAsset[]): Theme {
   const theme = createEmptyTheme(id, title, author);
   theme.wallpaper.layers = [];
@@ -93,8 +76,6 @@ export function buildThemeFromArtwork(id: string, title: string, author: string,
     const name = humanizeFileName(asset.file.split('/').pop() ?? key);
     theme.wallpaper.layers.push(asset.kind === 'video' ? createVideoLayer(key, name) : createImageLayer(key, name));
   }
-  // Only the first media layer is fully visible; additional images are hidden so the
-  // artist can decide in the editor how to combine them.
   theme.wallpaper.layers.forEach((layer, i) => {
     if (i > 0) layer.visible = false;
   });

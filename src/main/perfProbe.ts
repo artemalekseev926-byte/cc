@@ -1,13 +1,3 @@
-/**
- * Real performance measurement: runs a theme in an invisible window at the
- * primary display's resolution and samples the renderer and GPU processes.
- *
- * The probe window is click-through and practically invisible (1% opacity), and
- * Chromium's occlusion tracking is disabled at startup (see main.ts) so it renders
- * at full rate exactly like the real wallpaper would. Exactly 0% opacity must be
- * avoided: Chromium treats such a window as hidden and throttles it to ~1 FPS,
- * which would make every theme look "light".
- */
 import { cpus } from 'node:os';
 import { app, ipcMain, screen } from 'electron';
 import { IPC, type PerfProgress, type WallpaperFrameReport } from '../shared/ipc';
@@ -32,7 +22,6 @@ export async function probeTheme(theme: Theme, seconds: number, onProgress: (p: 
   const display = screen.getPrimaryDisplay();
   const measureMs = Math.max(3, Math.min(30, seconds)) * 1000;
 
-  // Prime Electron's per-process CPU counters (the first reading is always 0).
   app.getAppMetrics();
   const idleGpuRam = gpuMetrics().ramMB;
 
@@ -52,7 +41,6 @@ export async function probeTheme(theme: Theme, seconds: number, onProgress: (p: 
   };
   const onReady = (event: Electron.IpcMainEvent) => {
     if (event.sender.id !== win.webContents.id) return;
-    // Pausing rules are irrelevant during a test — we want the "always running" cost.
     win.webContents.send(IPC.wallpaperTheme, { ...theme, wallpaper: { ...theme.wallpaper, pauseOnBattery: false, pauseOnFullscreen: false } });
     win.webContents.send(IPC.wallpaperPause, false);
   };
@@ -66,7 +54,7 @@ export async function probeTheme(theme: Theme, seconds: number, onProgress: (p: 
 
     onProgress({ phase: 'warmup', progress: 0.05 });
     await new Promise((r) => setTimeout(r, WARMUP_MS));
-    app.getAppMetrics(); // reset CPU deltas after warm-up
+    app.getAppMetrics();
     collecting = true;
 
     const pid = win.webContents.getOSProcessId();

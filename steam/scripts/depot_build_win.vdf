@@ -7,7 +7,6 @@
 		"DepotPath" "."
 		"Recursive" "1"
 	}
-	// Never ship the development app id file.
 	"FileExclusion" "steam_appid.txt"
 	"FileExclusion" "*.pdb"
 }

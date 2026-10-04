@@ -1,7 +1,3 @@
-/**
- * Bridges the sandboxed renderer pages to the main process. Only the typed
- * `DeskforgeApi` surface is exposed — no raw ipcRenderer access.
- */
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import { IPC, type DeskforgeApi } from '../shared/ipc';
 

@@ -1,4 +1,3 @@
-/** Compact live resource meter (static estimate) used in the editor status bar and library cards. */
 import type { Estimate, Rating } from '../../shared/perf/estimator';
 import { useT } from '../app/i18n';
 

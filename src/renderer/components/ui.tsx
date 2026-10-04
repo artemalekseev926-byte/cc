@@ -1,7 +1,3 @@
-/**
- * Small, beginner-friendly UI kit: every control has a visible label, an
- * optional "?" hint, and shows its current value in human terms.
- */
 import { useEffect, useId, useState, type ReactNode } from 'react';
 
 export function Button({
@@ -69,7 +65,6 @@ export function Slider({
   onChange: (v: number) => void;
   format?: (v: number) => string;
   disabled?: boolean;
-  /** Labels shown under the ends of the track, e.g. ["Calm", "Wild"]. */
   marks?: [string, string];
 }) {
   return (

@@ -25,7 +25,6 @@ export class SettingsStore {
   }
 
   async set(patch: Partial<Settings>): Promise<Settings> {
-    // Only accept known keys with the right primitive type.
     const next = { ...this.value } as Record<string, unknown>;
     for (const [key, val] of Object.entries(patch)) {
       if (!(key in DEFAULT_SETTINGS)) continue;

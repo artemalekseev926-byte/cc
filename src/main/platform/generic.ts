@@ -1,8 +1,3 @@
-/**
- * Linux / macOS: live wallpapers run as a desktop-level window (X11 `_NET_WM_WINDOW_TYPE_DESKTOP`
- * via Electron's `type: 'desktop'`, macOS desktop window level). System colors, window
- * styles and taskbar layout are reported as unsupported so the editor greys them out.
- */
 import { release } from 'node:os';
 import type { BrowserWindow } from 'electron';
 import type { ApplyResult, PlatformCapabilities } from '../../shared/ipc';
@@ -59,10 +54,8 @@ export class GenericPlatform implements PlatformAdapter {
   }
 
   onShellRestart(): void {
-    /* no shell restarts on these platforms */
   }
 
   dispose(): void {
-    /* nothing to clean up */
   }
 }

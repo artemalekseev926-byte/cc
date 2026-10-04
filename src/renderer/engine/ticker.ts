@@ -1,10 +1,3 @@
-/**
- * Frame-rate-limited animation loop shared by every animated layer of a stage.
- *
- * - Honors the theme's FPS limit (most of the energy saving comes from here).
- * - Stops requesting frames entirely while paused, so a paused wallpaper costs ~0.
- * - Records frame-to-frame times for the performance report.
- */
 export type TickFn = (t: number, dt: number) => void;
 
 export class Ticker {
@@ -27,7 +20,6 @@ export class Ticker {
     this.fps = fps;
   }
 
-  /** Time in seconds since start, excluding paused time. */
   get time(): number {
     const now = this.pausedAt ?? performance.now();
     return (now - this.start - this.pausedTotal) / 1000;
@@ -61,7 +53,6 @@ export class Ticker {
     return this.paused;
   }
 
-  /** Returns and clears the frame times recorded since the last call. */
   drainFrameTimes(): number[] {
     const out = this.frameTimes;
     this.frameTimes = [];
@@ -83,7 +74,6 @@ export class Ticker {
     this.raf = 0;
     if (this.paused) return;
     const interval = 1000 / this.fps;
-    // Small tolerance so 60 Hz displays reliably hit a 30 FPS limit (every 2nd vsync).
     if (this.last === 0 || now - this.last >= interval - 1.5) {
       const dt = this.last === 0 ? 0 : Math.min(0.1, (now - this.last) / 1000);
       this.last = now;

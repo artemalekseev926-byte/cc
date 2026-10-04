@@ -1,8 +1,3 @@
-/**
- * A miniature, fully-live mock of the Windows desktop: the real wallpaper
- * engine underneath, plus a taskbar, desktop icons and a sample window that
- * reflect the theme's colors, corners, borders and layout.
- */
 import { forwardRef, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { readableOn, shade } from '../../shared/color';
 import type { Theme } from '../../shared/theme/schema';
@@ -11,7 +6,6 @@ import { Stage } from '../engine/Stage';
 
 interface Props {
   theme: Theme;
-  /** Physical width of the display being simulated (for scaling widgets and particles). */
   displayWidth: number;
   aspect?: number;
   paused?: boolean;

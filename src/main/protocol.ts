@@ -1,7 +1,3 @@
-/**
- * `deskforge://theme/<id>/<file>` — serves theme assets to renderer pages with
- * HTTP Range support, which <video> needs for smooth looping and seeking.
- */
 import { createReadStream, promises as fs } from 'node:fs';
 import { extname } from 'node:path';
 import { Readable } from 'node:stream';

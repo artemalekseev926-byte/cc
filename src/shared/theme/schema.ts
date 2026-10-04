@@ -1,14 +1,3 @@
-/**
- * Theme format (theme.json) — the single source of truth shared by the editor,
- * the wallpaper engine, the platform appliers, the performance analyzer and the
- * Steam Workshop pipeline.
- *
- * A theme folder looks like:
- *   my-theme/
- *     theme.json
- *     preview.jpg        (generated, used by the library and the Workshop)
- *     assets/<files>     (images / videos supplied by the artist)
- */
 import { z } from 'zod';
 
 export const THEME_SCHEMA_VERSION = 1;
@@ -39,7 +28,6 @@ export const GradientLayerSchema = z.object({
   colors: z.array(hexColor).min(2).max(6),
   angle: z.number().min(0).max(360).default(135),
   animated: z.boolean().default(true),
-  /** Seconds for one full animation cycle. */
   cycleSeconds: z.number().min(2).max(120).default(20),
 });
 
@@ -48,10 +36,8 @@ export const ImageLayerSchema = z.object({
   type: z.literal('image'),
   asset: z.string().min(1),
   fit: FitSchema.default('cover'),
-  /** 0 = static, 1 = strong mouse parallax. */
   parallax: unit.default(0),
   blur: z.number().min(0).max(40).default(0),
-  /** Slow "Ken Burns" zoom. */
   slowZoom: z.boolean().default(false),
 });
 
@@ -72,7 +58,6 @@ export const ParticlesLayerSchema = z.object({
   speed: z.number().min(0.1).max(5).default(1),
   size: z.number().min(0.5).max(6).default(1),
   color: hexColor.default('#ffffff'),
-  /** Particles drift away from the mouse cursor. */
   interactive: z.boolean().default(false),
 });
 
@@ -84,7 +69,6 @@ export const ShaderLayerSchema = z.object({
   speed: z.number().min(0.1).max(4).default(1),
   colorA: hexColor.default('#5b2bff'),
   colorB: hexColor.default('#00e0ff'),
-  /** Render scale: 0.5 renders at half resolution (much cheaper on the GPU). */
   quality: z.number().min(0.25).max(1).default(0.75),
 });
 
@@ -123,14 +107,12 @@ export const LayerSchema = z.discriminatedUnion('type', [
 ]);
 
 export const AssetSchema = z.object({
-  /** Path relative to the theme folder, e.g. "assets/forest.mp4". */
   file: z.string().min(1),
   kind: z.enum(['image', 'video']),
   bytes: z.number().int().nonnegative(),
   width: z.number().int().positive().optional(),
   height: z.number().int().positive().optional(),
   durationSec: z.number().positive().optional(),
-  /** Frames per second of a video asset, if known. */
   fps: z.number().positive().optional(),
 });
 
@@ -144,22 +126,16 @@ export const WallpaperSchema = z.object({
 export const ColorsSchema = z.object({
   accent: hexColor,
   mode: z.enum(['dark', 'light']).default('dark'),
-  /** Use the accent color on Start, taskbar and action center. */
   accentOnTaskbar: z.boolean().default(false),
-  /** Use the accent color on window title bars and borders. */
   accentOnTitleBars: z.boolean().default(true),
   transparency: z.boolean().default(true),
-  /** Pick the accent color automatically from the wallpaper. */
   autoAccentFromWallpaper: z.boolean().default(false),
 });
 
 export const WindowsStyleSchema = z.object({
-  /** System window open/close/minimize animations. */
   animations: z.boolean().default(true),
   corners: z.enum(['default', 'round', 'round-small', 'square']).default('default'),
-  /** Windows 11: custom border color for every window (null = system default). */
   borderColor: hexColor.nullable().default(null),
-  /** Windows 11: custom title-bar color (null = system default). */
   captionColor: hexColor.nullable().default(null),
   captionTextColor: hexColor.nullable().default(null),
 });
@@ -184,7 +160,6 @@ export const ThemeSchema = z.object({
   description: z.string().max(4000).default(''),
   tags: z.array(z.string().max(32)).max(12).default([]),
   version: z.string().default('1.0.0'),
-  /** Steam Workshop item id once published (as a decimal string — it does not fit a JS number safely). */
   workshopId: z.string().regex(/^\d+$/).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -221,7 +196,6 @@ export type Theme = z.infer<typeof ThemeSchema>;
 
 export type ParseResult = { ok: true; theme: Theme } | { ok: false; errors: string[] };
 
-/** Validates untrusted JSON (from disk or the Workshop) and fills in defaults. */
 export function parseTheme(input: unknown): ParseResult {
   const result = ThemeSchema.safeParse(input);
   if (result.success) {
@@ -238,7 +212,6 @@ export function parseTheme(input: unknown): ParseResult {
   };
 }
 
-/** Asset keys used by image/video layers. */
 export function referencedAssets(theme: Pick<Theme, 'wallpaper'>): string[] {
   const keys = new Set<string>();
   for (const layer of theme.wallpaper.layers) {
@@ -247,7 +220,6 @@ export function referencedAssets(theme: Pick<Theme, 'wallpaper'>): string[] {
   return [...keys];
 }
 
-/** Turns a free-form name into a valid theme id. */
 export function slugify(name: string): string {
   const map: Record<string, string> = {
     а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm',

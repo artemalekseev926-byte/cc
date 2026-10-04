@@ -44,7 +44,6 @@ code, .mono { font-family: 'Cascadia Code', Consolas, monospace; }
 .link { background: none; border: none; color: var(--accent-2); cursor: pointer; padding: 0; }
 .splash { display: grid; place-items: center; height: 100%; font-size: 28px; color: var(--muted); letter-spacing: 2px; }
 
-/* ── Layout ─────────────────────────────────────────────── */
 .app { display: grid; grid-template-columns: 220px 1fr; height: 100%; }
 .sidebar { background: var(--bg-2); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 16px 10px; gap: 4px; }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; padding: 4px 10px 18px; }
@@ -62,7 +61,6 @@ code, .mono { font-family: 'Cascadia Code', Consolas, monospace; }
 .section { display: flex; flex-direction: column; gap: 12px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
 
-/* ── Controls ───────────────────────────────────────────── */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; cursor: pointer; white-space: nowrap; transition: background .15s, border-color .15s, transform .05s; }
 .btn:hover:not(:disabled) { border-color: #3d4458; background: #282d3d; }
 .btn:active:not(:disabled) { transform: translateY(1px); }
@@ -154,7 +152,6 @@ code, .mono { font-family: 'Cascadia Code', Consolas, monospace; }
 .toast-error { border-left-color: var(--bad); }
 @keyframes toast-in { from { transform: translateY(10px); opacity: 0; } }
 
-/* ── Library ────────────────────────────────────────────── */
 .toolbar { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; }
 .grid-small { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
@@ -186,13 +183,11 @@ code, .mono { font-family: 'Cascadia Code', Consolas, monospace; }
 .template-card { padding: 10px; display: flex; flex-direction: column; gap: 6px; text-align: left; color: var(--text); font: inherit; cursor: pointer; }
 .template-card:hover { border-color: var(--accent); }
 
-/* ── Desktop preview ────────────────────────────────────── */
 .desktop-preview { position: relative; width: 100%; overflow: hidden; border-radius: 10px; background: #000; user-select: none; container-type: inline-size; }
 .preview-icons { position: absolute; display: flex; flex-direction: column; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
 .preview-window { position: absolute; overflow: hidden; pointer-events: none; transition: border-radius .25s, border-color .25s; }
 .preview-caption { display: flex; justify-content: space-between; align-items: center; font-family: var(--font); }
 
-/* ── Editor ─────────────────────────────────────────────── */
 .editor { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; }
 .editor-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--bg-2); }
 .editor-title { max-width: 300px; font-size: 16px; font-weight: 600; background: transparent; border-color: transparent; }
@@ -266,7 +261,6 @@ code, .mono { font-family: 'Cascadia Code', Consolas, monospace; }
 .perf-meter-item { font-size: 12.5px; color: var(--muted); }
 .perf-meter-item b { color: var(--text); }
 
-/* ── Workshop ───────────────────────────────────────────── */
 .dropzone { border: 2px dashed #3a4055; border-radius: 16px; padding: 30px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; background: var(--bg-2); transition: border-color .2s, background .2s; }
 .dropzone.over { border-color: var(--accent); background: rgba(124,108,255,.08); }
 .dropzone-icon { font-size: 40px; }
@@ -290,7 +284,6 @@ code, .mono { font-family: 'Cascadia Code', Consolas, monospace; }
 .subscribed li { display: flex; gap: 12px; align-items: center; padding: 8px 12px; background: var(--panel); border-radius: 8px; }
 .subscribed li > span:first-child { flex: 1; }
 
-/* ── Performance ────────────────────────────────────────── */
 .perf-layout { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; align-items: start; }
 .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0 10px; }
 .metric-head { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px; }

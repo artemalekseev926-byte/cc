@@ -1,11 +1,3 @@
-/**
- * Thin Win32 bindings through koffi (prebuilt FFI, no compiler needed at install
- * time — important for Steam builds). Loaded lazily and only on Windows.
- *
- * Window handles are passed as `intptr_t` (JS numbers): HWNDs always fit in 32
- * bits, even on 64-bit Windows.
- */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createRequire } from 'node:module';
 
 type Fn = (...args: any[]) => any;
@@ -78,7 +70,6 @@ function bind(): Win32 {
     rc: RECT,
     lParam: 'intptr_t',
   });
-  // Registered by name; referenced as DF_EnumWindowsProc in the EnumWindows prototype below.
   koffi.proto('bool __stdcall DF_EnumWindowsProc(intptr_t hwnd, intptr_t lParam)');
 
   const FindWindowW = user32.func('intptr_t __stdcall FindWindowW(const char16_t *cls, const char16_t *name)');
@@ -153,7 +144,7 @@ function bind(): Win32 {
       return GetWindowRectRaw(hwnd, rect) ? (rect as Rect) : null;
     },
     GetMonitorRectForWindow: (hwnd) => {
-      const monitor = MonitorFromWindow(hwnd, 2 /* MONITOR_DEFAULTTONEAREST */);
+      const monitor = MonitorFromWindow(hwnd, 2);
       if (!monitor) return null;
       const info = { cbSize: koffi.sizeof(MONITORINFO), rcMonitor: {}, rcWork: {}, dwFlags: 0 };
       return GetMonitorInfoW(monitor, info) ? (info.rcMonitor as Rect) : null;

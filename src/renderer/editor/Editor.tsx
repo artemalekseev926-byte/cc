@@ -1,7 +1,3 @@
-/**
- * The editor: tools on the left, a live desktop preview in the middle,
- * properties on the right, layers and a live resource meter at the bottom.
- */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { estimateTheme } from '../../shared/perf/estimator';
 import { api, isDesktopApp } from '../app/api';
@@ -28,7 +24,6 @@ export function Editor() {
   const [busy, setBusy] = useState<string | null>(null);
   const estimate = useMemo(() => (theme ? estimateTheme(theme, display) : null), [theme, display]);
 
-  // Keyboard shortcuts: Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z) / Ctrl+S / Delete
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -56,7 +51,6 @@ export function Editor() {
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  // Auto accent: keep the accent in sync with the wallpaper when enabled.
   const mediaSignature = theme
     ? theme.wallpaper.layers
         .filter((l) => l.visible)
@@ -72,7 +66,6 @@ export function Editor() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme?.colors.autoAccentFromWallpaper, mediaSignature]);
 
   if (!theme || !estimate) {

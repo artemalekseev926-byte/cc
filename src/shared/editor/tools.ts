@@ -1,12 +1,3 @@
-/**
- * The editor's tool catalog.
- *
- * Every action a user can take in the editor is a "tool" with a big icon, a
- * plain-language title, a one-line explanation, and a list of search keywords
- * (in every supported language, plus common synonyms and typos). The search box
- * ("What do you want to do?") matches against all of it, so a beginner can type
- * "снег", "прозрачная панель" or "clock" and land on the right tool.
- */
 import type { LayerType, ParticlePreset, ShaderPreset } from '../theme/schema';
 
 export type ToolCategory = 'background' | 'effects' | 'widgets' | 'colors' | 'windows' | 'taskbar' | 'desktop' | 'performance';
@@ -20,9 +11,7 @@ export interface Tool {
   id: string;
   category: ToolCategory;
   icon: string;
-  /** i18n keys: `tool.<id>.title` and `tool.<id>.desc` */
   action: ToolAction;
-  /** Shown first to beginners. */
   popular?: boolean;
   keywords: string[];
 }
@@ -41,7 +30,6 @@ export const CATEGORY_ICONS: Record<ToolCategory, string> = {
 };
 
 export const TOOLS: Tool[] = [
-  // ── Background ────────────────────────────────────────────────
   {
     id: 'import-image',
     category: 'background',
@@ -73,7 +61,6 @@ export const TOOLS: Tool[] = [
     action: { kind: 'addLayer', layer: 'solid' },
     keywords: ['цвет', 'однотонный', 'заливка', 'простой фон', 'solid', 'color', 'fill', 'plain'],
   },
-  // ── Effects ───────────────────────────────────────────────────
   {
     id: 'snow',
     category: 'effects',
@@ -153,7 +140,6 @@ export const TOOLS: Tool[] = [
     action: { kind: 'addLayer', layer: 'shader', preset: 'grid' },
     keywords: ['неон', 'сетка', 'ретро', 'синтвейв', 'киберпанк', 'neon', 'grid', 'retro', 'synthwave', 'cyberpunk', 'outrun'],
   },
-  // ── Widgets ───────────────────────────────────────────────────
   {
     id: 'clock',
     category: 'widgets',
@@ -169,7 +155,6 @@ export const TOOLS: Tool[] = [
     action: { kind: 'addLayer', layer: 'text' },
     keywords: ['текст', 'надпись', 'цитата', 'подпись', 'слова', 'text', 'quote', 'label', 'caption'],
   },
-  // ── Colors ────────────────────────────────────────────────────
   {
     id: 'accent',
     category: 'colors',
@@ -178,7 +163,6 @@ export const TOOLS: Tool[] = [
     action: { kind: 'openSection', section: 'colors' },
     keywords: ['цвет', 'акцент', 'цвета windows', 'тема', 'тёмная тема', 'темная', 'светлая', 'прозрачность', 'accent', 'colors', 'dark mode', 'light mode', 'transparency'],
   },
-  // ── Windows ───────────────────────────────────────────────────
   {
     id: 'window-style',
     category: 'windows',
@@ -187,7 +171,6 @@ export const TOOLS: Tool[] = [
     action: { kind: 'openSection', section: 'windows' },
     keywords: ['окна', 'рамка', 'углы', 'скругление', 'заголовок', 'анимация окон', 'border', 'corners', 'title bar', 'window animation', 'windows'],
   },
-  // ── Taskbar ───────────────────────────────────────────────────
   {
     id: 'taskbar',
     category: 'taskbar',
@@ -196,7 +179,6 @@ export const TOOLS: Tool[] = [
     action: { kind: 'openSection', section: 'taskbar' },
     keywords: ['панель задач', 'панель', 'таскбар', 'пуск', 'сверху', 'слева', 'по центру', 'скрывать', 'taskbar', 'panel', 'start', 'dock', 'position', 'autohide'],
   },
-  // ── Desktop ───────────────────────────────────────────────────
   {
     id: 'desktop-icons',
     category: 'desktop',
@@ -204,7 +186,6 @@ export const TOOLS: Tool[] = [
     action: { kind: 'openSection', section: 'desktop' },
     keywords: ['значки', 'иконки', 'ярлыки', 'рабочий стол', 'скрыть значки', 'icons', 'shortcuts', 'desktop'],
   },
-  // ── Performance ───────────────────────────────────────────────
   {
     id: 'performance',
     category: 'performance',
@@ -214,12 +195,10 @@ export const TOOLS: Tool[] = [
   },
 ];
 
-/** Lowercases and folds ё→е so that "звезды" matches "звёзды". */
 export function normalize(text: string): string {
   return text.toLowerCase().replace(/ё/g, 'е').trim();
 }
 
-/** Small Levenshtein distance for typo tolerance on short words. */
 function distance(a: string, b: string): number {
   if (Math.abs(a.length - b.length) > 2) return 99;
   const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...new Array(b.length).fill(0)]);
@@ -232,10 +211,6 @@ function distance(a: string, b: string): number {
   return dp[a.length][b.length];
 }
 
-/**
- * Ranks tools against a free-text query.
- * @param titleOf resolves a tool to its localized title + description (also searched).
- */
 export function searchTools(query: string, titleOf: (tool: Tool) => string = () => ''): Tool[] {
   const q = normalize(query);
   if (!q) return TOOLS;

@@ -1,7 +1,3 @@
-/**
- * Built-in templates. They are fully procedural (gradients, shaders, particles),
- * so they ship without any binary assets and look sharp at any resolution.
- */
 import {
   createClockLayer,
   createEmptyTheme,
@@ -15,7 +11,6 @@ import type { Theme } from './schema';
 
 export interface Preset {
   theme: Theme;
-  /** i18n key for the short description shown on the template card. */
   blurbKey: string;
 }
 

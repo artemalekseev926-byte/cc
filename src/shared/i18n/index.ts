@@ -11,7 +11,6 @@ export function resolveLang(setting: 'auto' | Lang, navigatorLang = 'en'): Lang 
   return /^(ru|uk|be|kk)\b/i.test(navigatorLang) ? 'ru' : 'en';
 }
 
-/** Looks up a key and substitutes {params}. Falls back to English, then to the key itself. */
 export function translate(lang: Lang, key: string, params?: Record<string, string | number>): string {
   const template = DICTIONARIES[lang][key] ?? DICTIONARIES.en[key] ?? key;
   if (!params) return template;

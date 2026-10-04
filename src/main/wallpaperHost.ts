@@ -1,8 +1,3 @@
-/**
- * Owns the live wallpaper windows (one per display), keeps them attached behind
- * the desktop icons, and pauses them when a fullscreen app or battery power
- * makes animation wasteful.
- */
 import { BrowserWindow, ipcMain, powerMonitor, screen, type Display } from 'electron';
 import { IPC, type DesktopStatus } from '../shared/ipc';
 import type { Theme } from '../shared/theme/schema';
@@ -70,7 +65,6 @@ export class WallpaperHost {
     this.emitStatus();
   }
 
-  /** Temporarily shows a theme, then goes back to the previous one. */
   async preview(theme: Theme, seconds: number): Promise<void> {
     const previous = this.previewTimer ? this.themeBeforePreview : this.theme;
     this.cancelPreview();
@@ -110,7 +104,6 @@ export class WallpaperHost {
     this.evaluatePause();
   }
 
-  /** Lets the performance probe measure without the live wallpaper competing for the GPU. */
   suspendForProbe(on: boolean): void {
     this.broadcast(IPC.wallpaperPause, on || this.paused);
   }
@@ -125,7 +118,6 @@ export class WallpaperHost {
 
   private boundsFor(display: Display) {
     if (process.platform !== 'win32') return display.bounds;
-    // WorkerW spans the virtual screen in physical pixels; position relative to its origin.
     const all = screen.getAllDisplays().map((d) => screen.dipToScreenRect(null, d.bounds));
     const originX = Math.min(...all.map((r) => r.x));
     const originY = Math.min(...all.map((r) => r.y));
@@ -142,7 +134,6 @@ export class WallpaperHost {
     if (win.isDestroyed()) return;
     const attached = this.platform.attachWallpaperWindow(win, this.boundsFor(display));
     if (!attached) {
-      // Fallback: a bottom-most, click-through window covering the display.
       win.setBounds(display.bounds);
       win.setIgnoreMouseEvents(true);
       win.showInactive();
@@ -162,8 +153,6 @@ export class WallpaperHost {
   private broadcast(channel: string, payload: unknown) {
     for (const s of this.surfaces) if (s.ready && !s.win.isDestroyed()) s.win.webContents.send(channel, payload);
   }
-
-  // ── Background loops ────────────────────────────────────────────────
 
   private startLoops() {
     if (!this.monitorTimer) this.monitorTimer = setInterval(() => this.evaluatePause(), MONITOR_INTERVAL_MS);
@@ -196,7 +185,6 @@ export class WallpaperHost {
     for (const s of this.surfaces) {
       const d = displays.find((x) => x.id === s.displayId);
       if (!d || !s.ready || s.win.isDestroyed()) continue;
-      // Normalized 0..1 within this display (can go outside when the cursor is on another screen).
       s.win.webContents.send(IPC.wallpaperCursor, { x: (p.x - d.bounds.x) / d.bounds.width, y: (p.y - d.bounds.y) / d.bounds.height });
     }
   }

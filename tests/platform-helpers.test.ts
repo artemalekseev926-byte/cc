@@ -14,8 +14,8 @@ describe('color conversions for Windows', () => {
     const p = accentPalette('#6c5cff');
     expect(p.length).toBe(32);
     expect([...p.slice(12, 15)]).toEqual([0x6c, 0x5c, 0xff]);
-    expect(p[0]).toBeGreaterThan(p[12]); // lighter first
-    expect(p[28]).toBeLessThan(p[12]); // darker last
+    expect(p[0]).toBeGreaterThan(p[12]);
+    expect(p[28]).toBeLessThan(p[12]);
   });
 
   it('picks readable text and a saturated dominant color', () => {

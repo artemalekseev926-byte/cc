@@ -1,12 +1,3 @@
-/**
- * Theme library on disk.
- *
- *   <userData>/themes/<id>/theme.json   — themes the user created or imported
- *   <steam workshop folder>/theme.json  — subscribed Workshop items (read-only)
- *   built-in presets                    — in memory (read-only)
- *
- * Read-only themes are duplicated into the local library before editing.
- */
 import { promises as fs } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { ImportArtworkResult, ThemeSource, ThemeSummary } from '../shared/ipc';
@@ -32,7 +23,6 @@ export class ThemeStore {
     await fs.mkdir(this.themesDir, { recursive: true });
   }
 
-  /** Registers installed Workshop items; their themes get the id `ws-<workshopId>`. */
   setWorkshopItems(items: Array<{ workshopId: string; folder: string }>): void {
     this.workshop.clear();
     for (const item of items) this.workshop.set(`ws-${item.workshopId}`, { dir: item.folder, workshopId: item.workshopId });
@@ -44,7 +34,6 @@ export class ThemeStore {
     return 'local';
   }
 
-  /** Folder of a theme, or null for built-ins (they have no files). */
   dirOf(id: string): string | null {
     if (isBuiltinTheme(id)) return null;
     const ws = this.workshop.get(id);
@@ -53,7 +42,6 @@ export class ThemeStore {
     return join(this.themesDir, id);
   }
 
-  /** Resolves a file inside a theme folder, refusing anything that escapes it. */
   resolveThemeFile(id: string, relativePath: string): string | null {
     const dir = this.dirOf(id);
     if (!dir) return null;
@@ -163,7 +151,6 @@ export class ThemeStore {
     return copy;
   }
 
-  /** Copies a file into the theme's assets folder and registers it. */
   async addAsset(themeId: string, sourcePath: string): Promise<{ key: string; asset: Asset }> {
     const theme = await this.load(themeId);
     const stat = await fs.stat(sourcePath);
@@ -185,10 +172,6 @@ export class ThemeStore {
     return { key, asset };
   }
 
-  /**
-   * Builds a new theme from files an artist dropped in. A dropped theme.json
-   * imports the whole folder it lives in instead.
-   */
   async importArtwork(paths: string[], title: string | undefined, author: string): Promise<ImportArtworkResult> {
     const files: ClassifiedFile[] = [];
     for (const path of paths) {

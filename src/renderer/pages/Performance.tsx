@@ -1,8 +1,3 @@
-/**
- * Performance preview: an instant estimate per layer, then a real measurement
- * (the theme runs invisibly for a few seconds while the app samples CPU, GPU
- * process, memory and frame pacing), plus one-click fixes.
- */
 import { useEffect, useMemo, useState } from 'react';
 import { estimateTheme, type Estimate } from '../../shared/perf/estimator';
 import type { MeasuredReport } from '../../shared/perf/measure';

@@ -1,5 +1,3 @@
-/** Color helpers shared by the renderer (pickers, auto-accent) and the Windows applier. */
-
 export interface RGB {
   r: number;
   g: number;
@@ -16,7 +14,6 @@ export function rgbToHex({ r, g, b }: RGB): string {
   return `#${c(r)}${c(g)}${c(b)}`;
 }
 
-/** Mixes towards white (amount > 0) or black (amount < 0). */
 export function shade(hex: string, amount: number): string {
   const { r, g, b } = hexToRgb(hex);
   const target = amount > 0 ? 255 : 0;
@@ -24,27 +21,20 @@ export function shade(hex: string, amount: number): string {
   return rgbToHex({ r: r + (target - r) * t, g: g + (target - g) * t, b: b + (target - b) * t });
 }
 
-/** Windows stores many colors as 0xAABBGGRR (COLORREF with alpha). */
 export function toAbgr(hex: string, alpha = 0xff): number {
   const { r, g, b } = hexToRgb(hex);
   return ((alpha << 24) | (b << 16) | (g << 8) | r) >>> 0;
 }
 
-/** DWM ColorizationColor is 0xAARRGGBB. */
 export function toArgb(hex: string, alpha = 0xc4): number {
   const { r, g, b } = hexToRgb(hex);
   return ((alpha << 24) | (r << 16) | (g << 8) | b) >>> 0;
 }
 
-/** COLORREF 0x00BBGGRR as used by DwmSetWindowAttribute. */
 export function toColorRef(hex: string): number {
   return toAbgr(hex, 0);
 }
 
-/**
- * Windows' AccentPalette: 8 RGBA entries from lightest to darkest, the base
- * accent sits at index 3. This mirrors what the Settings app writes.
- */
 export function accentPalette(hex: string): Uint8Array {
   const steps = [0.6, 0.4, 0.2, 0, -0.25, -0.45, -0.65, -0.8];
   const out = new Uint8Array(32);
@@ -64,15 +54,10 @@ export function luminance(hex: string): number {
   return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
 }
 
-/** Text color (black/white) that reads well on the given background. */
 export function readableOn(hex: string): '#000000' | '#ffffff' {
   return luminance(hex) > 0.4 ? '#000000' : '#ffffff';
 }
 
-/**
- * Picks a pleasant accent color from raw RGBA pixels: buckets colors, ignores
- * near-grey and very dark/bright pixels, and prefers saturated, frequent hues.
- */
 export function dominantAccent(pixels: Uint8ClampedArray | Uint8Array, fallback = '#6c5cff'): string {
   const buckets = new Map<number, { r: number; g: number; b: number; n: number; sat: number }>();
   for (let i = 0; i < pixels.length; i += 16) {

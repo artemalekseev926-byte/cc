@@ -1,8 +1,3 @@
-/**
- * Renders a theme's wallpaper layers. Used full-screen by the wallpaper host
- * and as a live miniature inside the editor, so what you see while editing is
- * exactly what ends up on the desktop.
- */
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MutableRefObject } from 'react';
 import type {
   ClockLayer,
@@ -37,14 +32,11 @@ export interface StageProps {
   theme: Theme;
   assetUrl: (key: string) => string | undefined;
   paused?: boolean;
-  /** Visual scale relative to the real display (1 on the desktop, ~0.4 in the editor). */
   scale?: number;
   cursor?: CursorRef;
-  /** Receives the ticker so the host can report frame times. */
   onTicker?: (ticker: Ticker) => void;
   className?: string;
   style?: CSSProperties;
-  /** Highlight a layer (editor selection). */
   highlightLayerId?: string | null;
 }
 
@@ -110,8 +102,6 @@ function LayerView({ layer, theme }: { layer: Layer; theme: Theme }) {
   }
 }
 
-// ── Gradient ────────────────────────────────────────────────────────────
-
 function GradientView({ layer }: { layer: GradientLayer }) {
   const { ticker } = useStage();
   const ref = useRef<HTMLDivElement>(null);
@@ -136,8 +126,6 @@ function GradientView({ layer }: { layer: GradientLayer }) {
     />
   );
 }
-
-// ── Image ───────────────────────────────────────────────────────────────
 
 const FIT: Record<string, CSSProperties['objectFit']> = { cover: 'cover', contain: 'contain', fill: 'fill', center: 'none' };
 
@@ -182,8 +170,6 @@ function ImageView({ layer }: { layer: ImageLayer }) {
   );
 }
 
-// ── Video ───────────────────────────────────────────────────────────────
-
 function VideoView({ layer }: { layer: VideoLayer; theme: Theme }) {
   const { assetUrl, paused } = useStage();
   const ref = useRef<HTMLVideoElement>(null);
@@ -210,8 +196,6 @@ function VideoView({ layer }: { layer: VideoLayer; theme: Theme }) {
   );
 }
 
-// ── Canvas helpers ──────────────────────────────────────────────────────
-
 function useCanvasSize(ref: React.RefObject<HTMLCanvasElement | null>, onResize: (w: number, h: number) => void) {
   useEffect(() => {
     const el = ref.current;
@@ -219,7 +203,6 @@ function useCanvasSize(ref: React.RefObject<HTMLCanvasElement | null>, onResize:
     const ro = new ResizeObserver(([entry]) => onResize(entry.contentRect.width, entry.contentRect.height));
     ro.observe(el);
     return () => ro.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref]);
 }
 
@@ -241,8 +224,6 @@ function ParticlesView({ layer }: { layer: ParticlesLayer }) {
       unsub();
       sys.current = null;
     };
-    // Recreate only when the canvas mounts; parameter changes go through update().
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticker]);
   useEffect(() => sys.current?.update(layer, scale), [layer, scale]);
   useCanvasSize(ref, (w, h) => sys.current?.resize(w, h));
@@ -269,7 +250,6 @@ function ShaderView({ layer }: { layer: ShaderLayer }) {
       r.dispose();
       renderer.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticker]);
   useEffect(() => {
     renderer.current?.update(layer);
@@ -284,8 +264,6 @@ function ShaderView({ layer }: { layer: ShaderLayer }) {
   }
   return <canvas ref={ref} style={{ ...canvasStyle, imageRendering: 'auto' }} />;
 }
-
-// ── Widgets ─────────────────────────────────────────────────────────────
 
 const FONTS: Record<string, string> = {
   system: '"Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif',

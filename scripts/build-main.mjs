@@ -1,5 +1,3 @@
-// Bundles the Electron main process and preload script with esbuild.
-// Native modules (koffi, steamworks.js) stay external and are loaded at runtime.
 import { build } from 'esbuild';
 
 const watch = process.argv.includes('--watch');

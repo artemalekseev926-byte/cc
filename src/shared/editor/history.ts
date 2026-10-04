@@ -1,8 +1,3 @@
-/**
- * Immutable undo/redo history. Consecutive edits with the same `mergeKey`
- * (e.g. dragging one slider) collapse into a single undo step so that one
- * Ctrl+Z undoes the whole drag, not every pixel of it.
- */
 export interface History<T> {
   past: T[];
   present: T;

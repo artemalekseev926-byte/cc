@@ -1,4 +1,3 @@
-/** Editor actions shared by the tool palette, drag & drop and keyboard shortcuts. */
 import type { Tool } from '../../shared/editor/tools';
 import { themeFileUrl } from '../../shared/ipc';
 import { createLayer, createParticlesLayer, createShaderLayer, createImageLayer, createVideoLayer } from '../../shared/theme/factory';
@@ -18,7 +17,6 @@ function insertLayer(layer: Layer, tr: TFunction): boolean {
     return false;
   }
   edit((t) => {
-    // Widgets go on top; backgrounds go above existing backgrounds but below effects/widgets.
     const isBackground = layer.type === 'image' || layer.type === 'video' || layer.type === 'solid' || layer.type === 'gradient';
     if (isBackground) {
       const firstNonBg = t.wallpaper.layers.findIndex((l) => !['image', 'video', 'solid', 'gradient'].includes(l.type));
@@ -39,14 +37,12 @@ export function addLayerOfType(type: Layer['type'], t: TFunction, preset?: Parti
   else layer = createLayer(type);
   layer.name = preset ? t(`preset.layer.${preset}`) : t(`layer.type.${type}`);
   if (layer.type === 'shader' || layer.type === 'particles') {
-    // Match effect colors to the theme accent so new effects look right immediately.
     const accent = useStudio.getState().editor.history?.present.colors.accent;
     if (layer.type === 'shader' && accent) layer.colorB = accent.slice(0, 7);
   }
   insertLayer(layer, t);
 }
 
-/** Copies media files into the theme and adds a layer for each. */
 export async function importMediaFiles(paths: string[], t: TFunction): Promise<void> {
   const state = useStudio.getState();
   const theme = state.editor.history?.present;

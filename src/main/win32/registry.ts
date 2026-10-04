@@ -1,7 +1,3 @@
-/**
- * Minimal registry access through reg.exe (ships with every Windows install,
- * no native module needed). Only HKCU keys are touched, so no admin rights.
- */
 import { execFile } from 'node:child_process';
 
 export type RegValue =
@@ -18,7 +14,6 @@ function run(args: string[]): Promise<string> {
   });
 }
 
-/** Parses one line of `reg query` output: "    Name    REG_DWORD    0x1". Exported for tests. */
 export function parseRegQueryOutput(output: string, name: string): RegValue | null {
   for (const raw of output.split(/\r?\n/)) {
     const line = raw.trim();
@@ -37,7 +32,7 @@ export async function regGet(key: string, name: string): Promise<RegValue | null
   try {
     return parseRegQueryOutput(await run(['query', key, '/v', name]), name);
   } catch {
-    return null; // value or key does not exist
+    return null;
   }
 }
 
@@ -51,7 +46,6 @@ export async function regDelete(key: string, name: string): Promise<void> {
   try {
     await run(['delete', key, '/v', name, '/f']);
   } catch {
-    /* already absent */
   }
 }
 

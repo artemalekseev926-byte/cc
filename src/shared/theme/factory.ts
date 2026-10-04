@@ -16,7 +16,6 @@ import {
 } from './schema';
 
 let counter = 0;
-/** Short unique id for layers (stable enough for a single editing session + persisted). */
 export function newId(prefix = 'l'): string {
   counter = (counter + 1) % 1_000_000;
   return `${prefix}-${Date.now().toString(36)}-${counter.toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -117,7 +116,6 @@ export function createTextLayer(text = 'Привет!'): TextLayer {
   return { ...base('Надпись'), type: 'text', text, position: 'bottom-right', color: '#ffffff', fontSize: 32, font: 'system' };
 }
 
-/** Creates a layer of a given type with friendly defaults (asset layers need an asset key). */
 export function createLayer(type: LayerType, asset?: string): Layer {
   switch (type) {
     case 'solid':
@@ -139,7 +137,6 @@ export function createLayer(type: LayerType, asset?: string): Layer {
   }
 }
 
-/** Deep copy with fresh layer ids — used for "Duplicate theme" and templates. */
 export function cloneTheme(theme: Theme, id: string, name: string): Theme {
   const copy: Theme = JSON.parse(JSON.stringify(theme));
   const now = new Date().toISOString();

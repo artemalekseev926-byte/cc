@@ -26,7 +26,6 @@ export function App() {
     void init().then(() => setReady(true));
   }, [init]);
 
-  // Warn before leaving the editor with unsaved changes.
   const navigate = (r: Route) => {
     if (route === 'editor' && r !== 'editor' && editor.dirty && !window.confirm(t('editor.leaveUnsaved'))) return;
     go(r);
@@ -80,7 +79,6 @@ export function App() {
   );
 }
 
-/** First-launch welcome: language, name, beginner mode — then straight into creating. */
 function Onboarding({ onCreate }: { onCreate: () => void }) {
   const t = useT();
   const { settings, updateSettings } = useStudio();

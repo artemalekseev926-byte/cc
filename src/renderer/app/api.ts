@@ -1,8 +1,3 @@
-/**
- * Access to the main process. When the studio runs in a plain browser (UI
- * development, automated screenshots, web demo) an in-memory mock stands in
- * so every page still works.
- */
 import { DEFAULT_SETTINGS, type DeskforgeApi, type Settings, type ThemeSummary } from '../../shared/ipc';
 import { cloneTheme } from '../../shared/theme/factory';
 import { PRESETS } from '../../shared/theme/presets';

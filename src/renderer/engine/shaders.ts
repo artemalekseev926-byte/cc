@@ -1,9 +1,3 @@
-/**
- * WebGL fragment-shader backgrounds. Each preset is a single full-screen
- * fragment shader driven by time and two theme colors. Rendering happens at a
- * reduced internal resolution (`quality`) and is upscaled by the compositor —
- * visually almost identical for these soft effects, and far cheaper on the GPU.
- */
 import { hexToRgb } from '../../shared/color';
 import type { ShaderLayer, ShaderPreset } from '../../shared/theme/schema';
 

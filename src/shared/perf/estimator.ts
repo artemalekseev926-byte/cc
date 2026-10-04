@@ -1,27 +1,8 @@
-/**
- * Static resource estimator.
- *
- * Gives an instant estimate of how much a theme will cost while it runs in the
- * background — before it is ever applied. The editor shows it live on every
- * change; the Performance page combines it with a real measurement (see
- * main/perfProbe.ts) taken by running the wallpaper in a hidden window.
- *
- * Units:
- *   cpu  — percent of ONE reference CPU core (a ~2020 mid-range desktop core)
- *   gpu  — percent of a reference mid-range GPU (GTX 1650 / RX 6400 class)
- *   ram  — megabytes of system memory
- *   vram — megabytes of video memory
- *
- * The constants were calibrated against measurements on reference hardware and
- * are intentionally a little pessimistic: users should never be surprised by a
- * theme that is heavier than advertised.
- */
 import type { Layer, Theme } from '../theme/schema';
 
 export interface DisplayInfo {
   width: number;
   height: number;
-  /** Number of displays the wallpaper is rendered on. */
   count: number;
 }
 
@@ -41,10 +22,8 @@ export interface LayerCost extends ResourceCost {
 export type Rating = 'light' | 'medium' | 'heavy' | 'extreme';
 
 export interface Recommendation {
-  /** i18n key, rendered with `params`. */
   key: string;
   params?: Record<string, string | number>;
-  /** Estimated saving in percent of the total CPU+GPU cost. */
   savingPercent: number;
   layerId?: string;
 }
@@ -53,9 +32,7 @@ export interface Estimate {
   total: ResourceCost;
   layers: LayerCost[];
   rating: Rating;
-  /** 0..100, higher = lighter. */
   score: number;
-  /** Rough extra power draw in watts on a laptop. */
   extraWatts: number;
   recommendations: Recommendation[];
 }
@@ -63,7 +40,6 @@ export interface Estimate {
 const REF_PIXELS = 1920 * 1080;
 const MB = 1024 * 1024;
 
-/** Chromium renderer + compositor baseline for an otherwise idle wallpaper window. */
 const BASELINE: ResourceCost = { cpu: 0.3, gpu: 0.3, ram: 70, vram: 24 };
 
 const SHADER_COMPLEXITY: Record<string, number> = {
@@ -75,13 +51,12 @@ const SHADER_COMPLEXITY: Record<string, number> = {
 };
 
 const PARTICLE_COST: Record<string, number> = {
-  // relative per-particle cost (draw complexity)
   snow: 1,
   rain: 0.8,
-  fireflies: 1.6, // glow
+  fireflies: 1.6,
   stars: 0.6,
   bubbles: 1.4,
-  sakura: 1.5, // rotated petals
+  sakura: 1.5,
 };
 
 function zero(): ResourceCost {
@@ -92,7 +67,6 @@ function add(a: ResourceCost, b: ResourceCost): ResourceCost {
   return { cpu: a.cpu + b.cpu, gpu: a.gpu + b.gpu, ram: a.ram + b.ram, vram: a.vram + b.vram };
 }
 
-/** Fraction of a frame budget a layer that animates every frame uses at a given fps limit. */
 function fpsFactor(fps: number): number {
   return fps / 60;
 }
@@ -102,7 +76,6 @@ export function estimateLayer(layer: Layer, theme: Theme, display: DisplayInfo):
   const fps = theme.wallpaper.fpsLimit;
   const screenPx = display.width * display.height;
   const screenScale = (screenPx / REF_PIXELS) * display.count;
-  // Every visible full-screen layer costs a composite pass.
   const composite = 0.25 * screenScale * fpsFactor(fps);
   const blendPenalty = layer.blendMode === 'normal' ? 1 : 1.35;
 
@@ -142,9 +115,8 @@ export function estimateLayer(layer: Layer, theme: Theme, display: DisplayInfo):
       const videoFps = Math.min(asset?.fps ?? 30, 60) * layer.playbackRate;
       const pxPerSec = w * h * videoFps;
       const ref = REF_PIXELS * 30;
-      const decodeLoad = pxPerSec / ref; // 1.0 = 1080p30
+      const decodeLoad = pxPerSec / ref;
       const bitrateMbps = asset?.durationSec && asset.bytes ? (asset.bytes * 8) / asset.durationSec / 1_000_000 : 8;
-      // Hardware decode is assumed (H.264/VP9/AV1 on any GPU from the last ~8 years).
       return {
         cpu: 0.8 + decodeLoad * 1.6 + bitrateMbps * 0.04,
         gpu: (decodeLoad * 3.5 + composite * 2) * blendPenalty,
@@ -166,7 +138,7 @@ export function estimateLayer(layer: Layer, theme: Theme, display: DisplayInfo):
 
     case 'shader': {
       const complexity = SHADER_COMPLEXITY[layer.preset] ?? 1;
-      const q = layer.quality * layer.quality; // pixel count scales with the square of the render scale
+      const q = layer.quality * layer.quality;
       return {
         cpu: 0.25 + 0.15 * fpsFactor(fps),
         gpu: (complexity * 9 * q * screenScale * fpsFactor(fps) + composite) * blendPenalty,
@@ -184,7 +156,6 @@ export function estimateLayer(layer: Layer, theme: Theme, display: DisplayInfo):
 }
 
 export function rate(total: ResourceCost): { rating: Rating; score: number } {
-  // A single "load" figure weighted towards what users actually notice.
   const load = total.cpu * 1.0 + total.gpu * 0.7 + Math.max(0, total.ram - 150) * 0.01 + Math.max(0, total.vram - 200) * 0.01;
   const score = Math.max(0, Math.min(100, Math.round(100 - load * 4)));
   const rating: Rating = load < 3 ? 'light' : load < 8 ? 'medium' : load < 16 ? 'heavy' : 'extreme';

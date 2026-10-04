@@ -1,4 +1,3 @@
-/** Layer stack: top of the list = front-most layer, like in every image editor. */
 import type { Layer } from '../../shared/theme/schema';
 import type { LayerCost } from '../../shared/perf/estimator';
 import { newId } from '../../shared/theme/factory';

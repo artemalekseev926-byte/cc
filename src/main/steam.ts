@@ -1,17 +1,10 @@
-/**
- * Steamworks integration (Workshop upload + subscribed items) via steamworks.js.
- * When Steam is not running — e.g. during development — the app keeps working
- * and the Workshop page explains what is missing.
- */
 import { createRequire } from 'node:module';
 import { shell } from 'electron';
 import type { PublishProgress, PublishRequest, PublishResult, SteamStatus, SubscribedItem } from '../shared/ipc';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 type SteamClient = any;
 
 const VISIBILITY: Record<PublishRequest['visibility'], number> = { public: 0, friends: 1, private: 2, unlisted: 3 };
-// workshop.UpdateStatus
 const STAGE: Record<number, PublishProgress['stage']> = {
   0: 'preparing',
   1: 'preparing',
@@ -46,15 +39,10 @@ export class SteamService {
     try {
       userName = this.client.localplayer.getName();
     } catch {
-      /* ignore */
     }
     return { available: true, appId: this.appId, userName };
   }
 
-  /**
-   * Creates the Workshop item on first publish (returns its id via `onCreated`
-   * so it can be stored in theme.json), then uploads content + preview.
-   */
   async publish(
     req: PublishRequest,
     existingId: string | undefined,
@@ -114,7 +102,6 @@ export class SteamService {
     }
   }
 
-  /** Installed Workshop items (folder on disk) for the library. */
   installedItems(): Array<{ workshopId: string; folder: string }> {
     if (!this.client) return [];
     const out: Array<{ workshopId: string; folder: string }> = [];
@@ -134,7 +121,6 @@ export class SteamService {
       const res = await this.client.workshop.getItems(ids);
       for (const item of res.items) if (item) titles.set(item.publishedFileId.toString(), item.title);
     } catch {
-      /* titles are optional */
     }
     return ids.map((id) => {
       const workshopId = id.toString();

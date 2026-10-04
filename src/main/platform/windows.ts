@@ -1,15 +1,3 @@
-/**
- * Windows 10/11 implementation.
- *
- * Everything is applied through supported, per-user mechanisms — HKCU registry
- * values that the Settings app itself writes, SystemParametersInfo, SHAppBarMessage
- * and DwmSetWindowAttribute. No DLL injection or Explorer patching: that keeps the
- * app safe next to anti-cheat software and antivirus heuristics, which matters for
- * a Steam product.
- *
- * Before the first change, the original values are saved to
- * `<userData>/windows-backup.json` so "Restore my original desktop" is always possible.
- */
 import { execFile, spawn } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import { release } from 'node:os';
@@ -31,7 +19,6 @@ interface Backup {
   autoHide: boolean;
 }
 
-/** Registry values DeskForge may change (backed up before the first change). */
 const TOUCHED: Array<[string, string]> = [
   [KEYS.personalize, 'AppsUseLightTheme'],
   [KEYS.personalize, 'SystemUsesLightTheme'],
@@ -89,10 +76,8 @@ export class WindowsPlatform implements PlatformAdapter {
       accentOnTaskbar: true,
       accentOnTitleBars: true,
       windowAnimations: ok,
-      // DWM corner/border/caption attributes exist since Windows 11 (build 22000).
       windowCorners: ok && this.isWin11,
       windowColors: ok && this.isWin11,
-      // Windows 11 officially supports only the bottom edge; "top" works on many builds via StuckRects3.
       taskbarPositions: this.isWin11 ? ['bottom', 'top'] : ['bottom', 'top', 'left', 'right'],
       taskbarAlignment: this.isWin11,
       taskbarAutoHide: ok,
@@ -101,8 +86,6 @@ export class WindowsPlatform implements PlatformAdapter {
     };
   }
 
-  // ── Backup ──────────────────────────────────────────────────────────────
-
   private get backupPath() {
     return join(this.userDataDir, 'windows-backup.json');
   }
@@ -110,9 +93,8 @@ export class WindowsPlatform implements PlatformAdapter {
   private async ensureBackup(): Promise<void> {
     try {
       await fs.access(this.backupPath);
-      return; // keep the very first snapshot: it is the user's real original setup
+      return;
     } catch {
-      /* create it */
     }
     const api = win32();
     const backup: Backup = {
@@ -130,8 +112,6 @@ export class WindowsPlatform implements PlatformAdapter {
     }
     await fs.writeFile(this.backupPath, JSON.stringify(backup, null, 2), 'utf8');
   }
-
-  // ── Apply ───────────────────────────────────────────────────────────────
 
   async applySystemTheme(theme: Theme, options: ApplyOptions): Promise<ApplyResult> {
     await this.ensureBackup();
@@ -171,7 +151,6 @@ export class WindowsPlatform implements PlatformAdapter {
       await regSet(KEYS.accent, 'AccentColorMenu', dword(toAbgr(accent)));
       await regSet(KEYS.accent, 'StartColorMenu', dword(toAbgr(shade(accent, -0.25))));
       await regSet(KEYS.accent, 'AccentPalette', binary(Buffer.from(accentPalette(accent))));
-      // Stop Windows from overriding the accent from the static wallpaper.
       await regSet(KEYS.controlDesktop, 'AutoColorization', dword(0));
     });
 
@@ -227,7 +206,7 @@ export class WindowsPlatform implements PlatformAdapter {
       async () => {
         await regSet(KEYS.advanced, 'HideIcons', dword(desktop.showIcons ? 0 : 1));
         const listView = findDesktopListView();
-        if (listView) api!.ShowWindow(listView, desktop.showIcons ? 5 /* SW_SHOW */ : 0 /* SW_HIDE */);
+        if (listView) api!.ShowWindow(listView, desktop.showIcons ? 5 : 0);
         const size = await regGet(KEYS.desktopBag, 'IconSize');
         const wanted = ICON_SIZE[desktop.iconSize];
         if (!size || size.data !== wanted) {
@@ -294,8 +273,6 @@ export class WindowsPlatform implements PlatformAdapter {
     return { ok: steps.every((s) => s.status !== 'failed'), steps, explorerRestarted: needsRestart };
   }
 
-  // ── Window styler (Windows 11 DWM attributes on every top-level window) ──
-
   private startWindowStyler(style: WindowsStyle): void {
     this.currentStyle = style;
     this.styledWindows.clear();
@@ -352,8 +329,6 @@ export class WindowsPlatform implements PlatformAdapter {
     for (const hwnd of this.styledWindows.keys()) if (!seen.has(hwnd)) this.styledWindows.delete(hwnd);
   }
 
-  // ── Wallpaper / shell ───────────────────────────────────────────────────
-
   attachWallpaperWindow(win: BrowserWindow, bounds: { x: number; y: number; width: number; height: number }): boolean {
     return attachToDesktop(hwndFromBuffer(win.getNativeWindowHandle()), bounds);
   }
@@ -370,13 +345,11 @@ export class WindowsPlatform implements PlatformAdapter {
     await new Promise<void>((resolve) => execFile('taskkill.exe', ['/f', '/im', 'explorer.exe'], { windowsHide: true }, () => resolve()));
     await new Promise((r) => setTimeout(r, 800));
     spawn('explorer.exe', [], { detached: true, stdio: 'ignore' }).unref();
-    // Give Explorer time to recreate Progman/WorkerW before wallpapers re-attach.
     await new Promise((r) => setTimeout(r, 3500));
     for (const cb of this.shellRestartListeners) cb();
   }
 
   dispose(): void {
-    // Wallpaper and styler stop together with the app, so leave windows consistent.
     this.stopWindowStyler(true);
   }
 }

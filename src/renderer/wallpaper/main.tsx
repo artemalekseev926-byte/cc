@@ -1,7 +1,3 @@
-/**
- * Wallpaper host page: one per display, parented behind the desktop icons by
- * the main process. Receives the theme, pause state and cursor position over IPC.
- */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { themeFileUrl } from '../../shared/ipc';
@@ -24,7 +20,6 @@ function WallpaperApp() {
       api.wallpaper.onCursor((pos) => (cursor.current = pos)),
     ];
     api.wallpaper.ready();
-    // Frame times feed the performance probe; cheap enough to always send.
     const id = setInterval(() => {
       const ticker = tickerRef.current;
       if (ticker) api.wallpaper.reportFrames({ frameTimesMs: ticker.drainFrameTimes() });

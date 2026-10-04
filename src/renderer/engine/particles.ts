@@ -1,7 +1,3 @@
-/**
- * Canvas 2D particle systems. Sprites are pre-rendered once per color/size so
- * each frame is just a batch of drawImage calls.
- */
 import type { ParticlesLayer } from '../../shared/theme/schema';
 
 interface Particle {
@@ -84,7 +80,6 @@ export class ParticleSystem {
   constructor(
     private readonly canvas: HTMLCanvasElement,
     private layer: ParticlesLayer,
-    /** Visual scale relative to the target display (the editor preview is a miniature). */
     private scale: number,
   ) {}
 
@@ -206,7 +201,6 @@ export class ParticleSystem {
       p.y += dy;
       p.rot += p.vr * dt;
 
-      // Wrap / respawn
       if (preset === 'bubbles') {
         if (p.y < -30) Object.assign(p, this.spawn(false));
       } else if (preset === 'fireflies' || preset === 'stars') {

@@ -1,8 +1,3 @@
-/**
- * Pre-publish checklist for the Steam Workshop. Each check is shown to the
- * artist as a line with a green tick, a yellow warning or a red blocker, so
- * they know exactly what to fix before uploading.
- */
 import { estimateTheme, type DisplayInfo } from '../perf/estimator';
 import { referencedAssets, type Theme } from '../theme/schema';
 import { LIMITS } from './import';
@@ -12,7 +7,6 @@ export type CheckLevel = 'ok' | 'warning' | 'error';
 export interface Check {
   id: string;
   level: CheckLevel;
-  /** i18n key */
   key: string;
   params?: Record<string, string | number>;
 }
@@ -42,7 +36,6 @@ export interface PublishInput {
   description: string;
   tags: string[];
   previewBytes: number | null;
-  /** Total bytes of the theme folder that will be uploaded. */
   contentBytes: number;
   acceptedTerms: boolean;
   display?: DisplayInfo;
@@ -98,7 +91,6 @@ export function canPublish(checks: Check[]): boolean {
   return checks.every((c) => c.level !== 'error');
 }
 
-/** Steam stores the description as BBCode-ish text; append a performance badge so subscribers know what to expect. */
 export function workshopDescription(description: string, theme: Theme, display?: DisplayInfo): string {
   const e = estimateTheme(theme, display);
   const badge = {

@@ -1,4 +1,3 @@
-/** Global studio state (zustand). The editor keeps its theme in an undo/redo history. */
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { canRedo, canUndo, createHistory, push, redo, undo, type History } from '../../shared/editor/history';
@@ -33,7 +32,6 @@ interface StudioState {
   desktop: DesktopStatus;
   toasts: Toast[];
   editor: EditorState;
-  /** Theme selected on the Performance / Workshop pages. */
   focusThemeId: string | null;
 
   init(): Promise<void>;
@@ -45,7 +43,6 @@ interface StudioState {
 
   openInEditor(theme: Theme): void;
   closeEditor(): void;
-  /** Applies a change to the theme being edited. Same mergeKey within a short window = one undo step. */
   edit(recipe: (draft: Theme) => void, mergeKey?: string): void;
   updateLayer(id: string, patch: Partial<Layer>, mergeKey?: string): void;
   undo(): void;
@@ -171,7 +168,6 @@ export const useStudio = create<StudioState>((set, get) => ({
 
 export const useEditingTheme = () => useStudio((s) => s.editor.history?.present ?? null);
 
-/** Asset URL resolver for a theme (memoize per theme in components). */
 export function assetResolver(theme: Theme) {
   return (key: string) => {
     const asset = theme.assets[key];
@@ -179,7 +175,6 @@ export function assetResolver(theme: Theme) {
   };
 }
 
-/** Primary display in physical pixels, used for estimates. */
 export function usePrimaryDisplay() {
   const displays = useStudio((s) => s.displays);
   return useMemo(() => {

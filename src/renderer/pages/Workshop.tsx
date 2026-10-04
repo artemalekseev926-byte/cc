@@ -1,7 +1,3 @@
-/**
- * Steam Workshop: artists drop their artwork, get a ready theme, check it
- * against a clear checklist and publish — plus the list of subscribed items.
- */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PublishProgress, PublishRequest, SteamStatus, SubscribedItem } from '../../shared/ipc';
 import type { ClassifiedFile } from '../../shared/workshop/import';

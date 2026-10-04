@@ -1,5 +1,4 @@
 export const ru: Record<string, string> = {
-  // Навигация и статус
   'nav.library': 'Библиотека',
   'nav.editor': 'Редактор',
   'nav.workshop': 'Мастерская',
@@ -12,7 +11,6 @@ export const ru: Record<string, string> = {
   'status.paused.battery': 'Пауза: работа от батареи',
   'status.paused.manual': 'Пауза',
 
-  // Общее
   'common.back': 'Назад',
   'common.next': 'Далее',
   'common.off': 'Выкл.',
@@ -32,7 +30,6 @@ export const ru: Record<string, string> = {
   'caps.windowsOnly': 'Доступно только в Windows 10/11',
   'caps.needsWin11': 'Нужна Windows 11',
 
-  // Знакомство
   'onboarding.title': 'Добро пожаловать в DeskForge!',
   'onboarding.intro': 'Сделайте рабочий стол своим за пару минут — без сложных настроек.',
   'onboarding.f1': 'Живые обои: видео, эффекты, частицы, часы',
@@ -45,7 +42,6 @@ export const ru: Record<string, string> = {
   'onboarding.explore': 'Сначала осмотрюсь',
   'onboarding.createFirst': 'Создать первую тему',
 
-  // Библиотека
   'library.title': 'Мои темы',
   'library.subtitle': 'Нажмите «Применить» — и тема сразу появится на рабочем столе.',
   'library.tip': 'Наведите курсор на карточку, чтобы увидеть анимацию. Двойной щелчок открывает тему в редакторе.',
@@ -78,7 +74,6 @@ export const ru: Record<string, string> = {
   'library.source.local': 'Моя',
   'library.source.workshop': 'Мастерская',
 
-  // Новая тема
   'new.title': 'Новая тема',
   'new.template': 'Из шаблона',
   'new.templateDesc': 'Готовая красивая тема, которую можно менять как угодно',
@@ -93,7 +88,6 @@ export const ru: Record<string, string> = {
   'preset.ocean': 'Глубина океана с пузырьками',
   'preset.minimal': 'Минимум отвлечений, почти без нагрузки',
 
-  // Применение
   'apply.summary': 'Готово: применено {applied}, пропущено {skipped}.',
   'apply.failedList': 'Не удалось: {list}.',
   'apply.explorerRestarted': 'Проводник перезапущен, чтобы применить панель задач.',
@@ -119,7 +113,6 @@ export const ru: Record<string, string> = {
   'apply.nothingToRestore': 'Нечего восстанавливать — DeskForge ещё ничего не менял',
   'apply.windowsOnly': 'Цвета и панель задач меняются только в Windows',
 
-  // Редактор
   'editor.tools': 'Инструменты',
   'editor.searchTools': '🔍 Что вы хотите сделать?',
   'editor.noToolsFound': 'Ничего не нашлось. Попробуйте другое слово — например, «снег», «часы» или «панель».',
@@ -382,7 +375,6 @@ export const ru: Record<string, string> = {
   'tag.Static': 'Статичные',
   'tag.Widgets': 'Виджеты',
 
-  // Производительность
   'perf.title': 'Нагрузка на компьютер',
   'perf.subtitle': 'Узнайте заранее, сколько ресурсов тема будет потреблять в фоне — и сделайте её легче в один клик.',
   'perf.noTheme': 'Нет тем для проверки',
@@ -448,7 +440,6 @@ export const ru: Record<string, string> = {
   'rec.pauseFullscreen': 'Включите паузу в играх — обои не будут отнимать FPS.',
   'rec.pauseBattery': 'Включите паузу от батареи — ноутбук проработает дольше.',
 
-  // Мастерская
   'workshop.title': 'Мастерская Steam',
   'workshop.subtitle': 'Делитесь своими работами с миллионами игроков и скачивайте темы других авторов.',
   'workshop.publishTitle': 'Публикация',
@@ -490,7 +481,6 @@ export const ru: Record<string, string> = {
   'steam.unavailable': 'Steam недоступен',
   'steam.onlyLocal': 'Публиковать можно только свои темы',
 
-  // Импорт
   'import.title': 'Импорт работ художника',
   'import.drop': 'Перетащите сюда картинки или видео',
   'import.formats': 'PNG, JPG, WEBP, GIF, MP4, WEBM — или папку темы с theme.json',
@@ -511,7 +501,6 @@ export const ru: Record<string, string> = {
   'import.warn.gif': 'GIF работает, но MP4/WEBM будет легче и качественнее',
   'import.warn.mov': 'MOV может не воспроизводиться — лучше MP4 или WEBM',
 
-  // Проверки публикации
   'check.titleShort': 'Название слишком короткое (минимум 3 символа)',
   'check.titleLong': 'Название длиннее 128 символов',
   'check.titleOk': 'Название в порядке',
@@ -537,7 +526,6 @@ export const ru: Record<string, string> = {
   'check.terms': 'Подтвердите права на работу',
   'check.termsOk': 'Права подтверждены',
 
-  // Настройки
   'settings.title': 'Настройки',
   'settings.language': 'Язык',
   'settings.auto': 'Как в системе',

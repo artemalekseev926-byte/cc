@@ -1,5 +1,4 @@
 export const en: Record<string, string> = {
-  // Navigation & status
   'nav.library': 'Library',
   'nav.editor': 'Editor',
   'nav.workshop': 'Workshop',
@@ -12,7 +11,6 @@ export const en: Record<string, string> = {
   'status.paused.battery': 'Paused: on battery',
   'status.paused.manual': 'Paused',
 
-  // Common
   'common.back': 'Back',
   'common.next': 'Next',
   'common.off': 'Off',
@@ -32,7 +30,6 @@ export const en: Record<string, string> = {
   'caps.windowsOnly': 'Available on Windows 10/11 only',
   'caps.needsWin11': 'Requires Windows 11',
 
-  // Onboarding
   'onboarding.title': 'Welcome to DeskForge!',
   'onboarding.intro': 'Make your desktop truly yours in a couple of minutes — no complicated settings.',
   'onboarding.f1': 'Live wallpapers: video, effects, particles, clocks',
@@ -45,7 +42,6 @@ export const en: Record<string, string> = {
   'onboarding.explore': 'Let me look around',
   'onboarding.createFirst': 'Create my first theme',
 
-  // Library
   'library.title': 'My themes',
   'library.subtitle': 'Click “Apply” and the theme appears on your desktop instantly.',
   'library.tip': 'Hover a card to see it animate. Double-click to open it in the editor.',
@@ -78,7 +74,6 @@ export const en: Record<string, string> = {
   'library.source.local': 'Mine',
   'library.source.workshop': 'Workshop',
 
-  // New theme
   'new.title': 'New theme',
   'new.template': 'From a template',
   'new.templateDesc': 'A polished theme you can change however you like',
@@ -93,7 +88,6 @@ export const en: Record<string, string> = {
   'preset.ocean': 'Ocean depths with bubbles',
   'preset.minimal': 'Distraction-free, almost zero load',
 
-  // Apply
   'apply.summary': 'Done: {applied} applied, {skipped} skipped.',
   'apply.failedList': 'Failed: {list}.',
   'apply.explorerRestarted': 'Explorer was restarted to apply the taskbar.',
@@ -119,7 +113,6 @@ export const en: Record<string, string> = {
   'apply.nothingToRestore': 'Nothing to restore — DeskForge has not changed anything yet',
   'apply.windowsOnly': 'Colors and taskbar can only be changed on Windows',
 
-  // Editor
   'editor.tools': 'Tools',
   'editor.searchTools': '🔍 What do you want to do?',
   'editor.noToolsFound': 'Nothing found. Try another word — e.g. “snow”, “clock” or “taskbar”.',
@@ -382,7 +375,6 @@ export const en: Record<string, string> = {
   'tag.Static': 'Static',
   'tag.Widgets': 'Widgets',
 
-  // Performance
   'perf.title': 'PC load',
   'perf.subtitle': 'Know in advance how many resources a theme will use in the background — and make it lighter in one click.',
   'perf.noTheme': 'No themes to check',
@@ -448,7 +440,6 @@ export const en: Record<string, string> = {
   'rec.pauseFullscreen': 'Turn on pause in games — the wallpaper won’t steal FPS.',
   'rec.pauseBattery': 'Turn on pause on battery — the laptop lasts longer.',
 
-  // Workshop
   'workshop.title': 'Steam Workshop',
   'workshop.subtitle': 'Share your work with millions of players and download themes from other creators.',
   'workshop.publishTitle': 'Publishing',
@@ -490,7 +481,6 @@ export const en: Record<string, string> = {
   'steam.unavailable': 'Steam is unavailable',
   'steam.onlyLocal': 'Only your own themes can be published',
 
-  // Import
   'import.title': 'Import artwork',
   'import.drop': 'Drop pictures or videos here',
   'import.formats': 'PNG, JPG, WEBP, GIF, MP4, WEBM — or a theme folder with theme.json',
@@ -511,7 +501,6 @@ export const en: Record<string, string> = {
   'import.warn.gif': 'GIF works, but MP4/WEBM is lighter and looks better',
   'import.warn.mov': 'MOV may not play — prefer MP4 or WEBM',
 
-  // Publish checks
   'check.titleShort': 'Title is too short (3 characters minimum)',
   'check.titleLong': 'Title is longer than 128 characters',
   'check.titleOk': 'Title looks good',
@@ -537,7 +526,6 @@ export const en: Record<string, string> = {
   'check.terms': 'Confirm you have the rights to this work',
   'check.termsOk': 'Rights confirmed',
 
-  // Settings
   'settings.title': 'Settings',
   'settings.language': 'Language',
   'settings.auto': 'System',

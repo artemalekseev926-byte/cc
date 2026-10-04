@@ -1,4 +1,3 @@
-/** Helpers for creating renderer windows that load either the Vite dev server or the built files. */
 import { join } from 'node:path';
 import { BrowserWindow, type BrowserWindowConstructorOptions } from 'electron';
 
@@ -26,7 +25,6 @@ export function createWallpaperWindow(extra: BrowserWindowConstructorOptions = {
     focusable: false,
     hasShadow: false,
     backgroundColor: '#000000',
-    // X11/macOS: render at desktop level. On Windows the window is re-parented to WorkerW instead.
     ...(process.platform !== 'win32' ? { type: 'desktop' } : {}),
     webPreferences: {
       preload: PRELOAD,

@@ -3,16 +3,12 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
 
-// React Fast Refresh injects an inline script in dev; the strict CSP only applies to builds.
 const stripCspInDev: Plugin = {
   name: 'strip-csp-in-dev',
   apply: 'serve',
   transformIndexHtml: (html) => html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, ''),
 };
 
-// The renderer has two entry pages:
-//  - index.html      — the studio (library, editor, workshop, performance)
-//  - wallpaper.html  — the live wallpaper host that sits behind desktop icons
 export default defineConfig({
   root: resolve(__dirname, 'src/renderer'),
   base: './',

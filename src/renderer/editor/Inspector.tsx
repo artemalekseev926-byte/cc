@@ -1,8 +1,3 @@
-/**
- * Right panel: properties of the selected layer, or of a whole-theme section
- * (colors, windows, taskbar, desktop, performance, info). In beginner mode the
- * rarely-needed options are tucked away behind "More options".
- */
 import { useState, type ReactNode } from 'react';
 import type { Estimate } from '../../shared/perf/estimator';
 import type {
@@ -92,8 +87,6 @@ function Advanced({ children }: { children: ReactNode }) {
 }
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
-
-// ── Layer ───────────────────────────────────────────────────────────────
 
 function LayerInspector({ layer, theme }: { layer: Layer; theme: Theme }) {
   const t = useT();
@@ -375,8 +368,6 @@ function TextProps({ layer, set }: { layer: TextLayer; set: Setter<TextLayer> })
   );
 }
 
-// ── Theme sections ──────────────────────────────────────────────────────
-
 function useCaps() {
   return useStudio((s) => s.caps);
 }
@@ -541,7 +532,6 @@ function DesktopSection({ theme }: { theme: Theme }) {
   );
 }
 
-/** Applies a recommendation automatically where it is a simple parameter change. */
 export function applyRecommendation(draft: Theme, key: string, layerId?: string): boolean {
   const layer = layerId ? draft.wallpaper.layers.find((l) => l.id === layerId) : undefined;
   switch (key) {

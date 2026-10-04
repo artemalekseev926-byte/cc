@@ -40,7 +40,6 @@ export function registerIpc(s: Services): void {
   const notifyLibrary = () => s.studioWindow()?.webContents.send(IPC.libraryChanged);
   s.host.onStatus((status) => s.studioWindow()?.webContents.send(IPC.desktopStatusChanged, status));
 
-  // ── Platform ──
   ipcMain.handle(IPC.platformCapabilities, () => s.platform.capabilities());
   ipcMain.handle(IPC.platformDisplays, () =>
     screen.getAllDisplays().map((d) => ({
@@ -52,7 +51,6 @@ export function registerIpc(s: Services): void {
     })),
   );
 
-  // ── Themes ──
   ipcMain.handle(IPC.themesList, async () => {
     s.store.setWorkshopItems(s.steam.installedItems());
     return s.store.list();
@@ -62,7 +60,6 @@ export function registerIpc(s: Services): void {
     const t = requireTheme(theme);
     await s.store.save(t);
     notifyLibrary();
-    // Keep the desktop in sync when the active theme is edited.
     if (s.host.activeTheme?.id === t.id) await s.host.show(t);
   });
   ipcMain.handle(IPC.themesRemove, async (_e, id: string) => {
@@ -88,7 +85,6 @@ export function registerIpc(s: Services): void {
     const r = { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) };
     const image = await event.sender.capturePage(r);
     const resized = image.resize({ width: 1280, quality: 'best' });
-    // Steam rejects Workshop previews over 1 MB.
     let jpeg = resized.toJPEG(88);
     for (const q of [78, 65, 50]) if (jpeg.length > 1000 * 1024) jpeg = resized.toJPEG(q);
     const result = await s.store.writePreview(String(themeId), jpeg);
@@ -113,7 +109,6 @@ export function registerIpc(s: Services): void {
     return res.canceled ? [] : res.filePaths;
   });
 
-  // ── Desktop ──
   ipcMain.handle(IPC.desktopApply, async (_e, themeId: string) => {
     const theme = await s.store.load(String(themeId));
     const result = await s.platform.applySystemTheme(theme, { allowExplorerRestart: s.settings.get().allowExplorerRestart });
@@ -135,7 +130,6 @@ export function registerIpc(s: Services): void {
   });
   ipcMain.handle(IPC.desktopStatus, () => s.host.status());
 
-  // ── Performance ──
   ipcMain.handle(IPC.perfProbe, async (event, theme: unknown, seconds: number) => {
     const t = requireTheme(theme);
     s.host.suspendForProbe(true);
@@ -146,7 +140,6 @@ export function registerIpc(s: Services): void {
     }
   });
 
-  // ── Steam ──
   ipcMain.handle(IPC.steamStatus, () => s.steam.status());
   ipcMain.handle(IPC.steamSubscribed, () => s.steam.subscribed());
   ipcMain.handle(IPC.steamOpenItem, (_e, id: string) => s.steam.openItem(String(id)));
@@ -179,7 +172,6 @@ export function registerIpc(s: Services): void {
     return result;
   });
 
-  // ── Settings ──
   ipcMain.handle(IPC.settingsGet, () => s.settings.get());
   ipcMain.handle(IPC.settingsSet, async (_e, patch: Partial<Settings>) => {
     const next = await s.settings.set(patch ?? {});
@@ -188,7 +180,6 @@ export function registerIpc(s: Services): void {
   });
 }
 
-/** Exposed for the tray tooltip. */
 export function describeActive(theme: Theme | null): string {
   if (!theme) return 'DeskForge';
   const e = estimateTheme(theme, primaryDisplayInfo());

@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error — plain .mjs helper without types
 import { collectKeys } from '../scripts/i18n-keys.mjs';
 import { CATEGORY_ORDER, TOOLS } from '../src/shared/editor/tools';
 import { DICTIONARIES, resolveLang, translate } from '../src/shared/i18n';
 import { PRESETS } from '../src/shared/theme/presets';
 import { WORKSHOP_TAGS } from '../src/shared/workshop/validate';
 
-/** Keys built at runtime from data (template-literal t() calls). */
 function dynamicKeys(): string[] {
   const keys: string[] = [];
   const add = (prefix: string, values: readonly string[], suffix = '') => values.forEach((v) => keys.push(`${prefix}${v}${suffix}`));

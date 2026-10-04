@@ -1,4 +1,3 @@
-/** Browser-side media helpers: metadata probing and accent-color extraction. */
 import { dominantAccent } from '../../shared/color';
 import type { Asset, Theme } from '../../shared/theme/schema';
 import { assetResolver } from './store';
@@ -10,7 +9,6 @@ export interface MediaInfo {
   fps?: number;
 }
 
-/** Reads image/video dimensions, duration and (for video) an FPS estimate. */
 export function probeMedia(url: string, kind: Asset['kind']): Promise<MediaInfo> {
   if (kind === 'image') {
     return new Promise((resolve) => {
@@ -38,7 +36,6 @@ export function probeMedia(url: string, kind: Asset['kind']): Promise<MediaInfo>
         height: video.videoHeight || undefined,
         durationSec: Number.isFinite(video.duration) ? video.duration : undefined,
       };
-      // Count presented frames for ~0.6 s of playback to estimate the frame rate.
       const v = video as HTMLVideoElement & { requestVideoFrameCallback?: (cb: (now: number, meta: { mediaTime: number; presentedFrames: number }) => void) => number };
       if (!v.requestVideoFrameCallback) {
         clearTimeout(timeout);
@@ -71,7 +68,6 @@ export function probeMedia(url: string, kind: Asset['kind']): Promise<MediaInfo>
   });
 }
 
-/** Draws a downscaled frame of the given media into a canvas and returns its pixels. */
 async function samplePixels(url: string, kind: Asset['kind']): Promise<Uint8ClampedArray | null> {
   const canvas = document.createElement('canvas');
   canvas.width = 96;
@@ -104,7 +100,6 @@ async function samplePixels(url: string, kind: Asset['kind']): Promise<Uint8Clam
   }
 }
 
-/** Suggests an accent color that matches the wallpaper. */
 export async function extractAccent(theme: Theme): Promise<string> {
   const layers = [...theme.wallpaper.layers].reverse().filter((l) => l.visible);
   const resolve = assetResolver(theme);

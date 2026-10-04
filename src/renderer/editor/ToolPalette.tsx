@@ -1,7 +1,3 @@
-/**
- * Left panel of the editor: "What do you want to do?" search plus every tool
- * grouped into plain-language categories with big icons and one-line help.
- */
 import { useMemo, useState } from 'react';
 import { CATEGORY_ICONS, CATEGORY_ORDER, TOOLS, searchTools, type Tool, type ToolCategory } from '../../shared/editor/tools';
 import { useT } from '../app/i18n';
